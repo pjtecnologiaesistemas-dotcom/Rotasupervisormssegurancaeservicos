@@ -539,7 +539,7 @@
     </div>
     <div style="padding:20px 24px" id="rotaModalContent"></div>
     <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-primary" onclick="abrirGoogleMaps()">🗺️ Abrir no Google Maps</button>
+      <button class="btn btn-primary" onclick="abrirGoogleMapsModal()">🗺️ Abrir no Google Maps</button>
       <button class="btn btn-secondary" onclick="closeModal()">Fechar</button>
     </div>
   </div>
@@ -828,26 +828,58 @@ function abrirRotaMaps(rotaId) {
   document.getElementById('rotaModal').classList.add('open');
 }
 
-function abrirGoogleMaps() {
-  if(!currentRotaPostos || !currentRotaPostos.length) return;
-  var origem = currentRotaPostos[0];
-  var destino = currentRotaPostos[currentRotaPostos.length-1];
-  // Google Maps aceita até 8 waypoints na URL pública
-  var middle = currentRotaPostos.slice(1,-1).slice(0,8);
-  var waypoints = middle.map(function(p){ return p.lat+','+p.lng; }).join('|');
-  var url = 'https://www.google.com/maps/dir/?api=1' +
+function _buildMapsUrl(postos) {
+  if(!postos || postos.length < 1) return null;
+  if(postos.length === 1) {
+    return 'https://www.google.com/maps/search/?api=1&query='+postos[0].lat+','+postos[0].lng;
+  }
+  var origem  = postos[0];
+  var destino = postos[postos.length-1];
+  var middle  = postos.slice(1,-1).slice(0,8);
+  var wp = middle.map(function(p){ return p.lat+','+p.lng; }).join('|');
+  return 'https://www.google.com/maps/dir/?api=1' +
     '&origin='+origem.lat+','+origem.lng +
     '&destination='+destino.lat+','+destino.lng +
-    (waypoints ? '&waypoints='+encodeURIComponent(waypoints) : '') +
+    (wp ? '&waypoints='+encodeURIComponent(wp) : '') +
     '&travelmode=driving';
-  // Usar <a> para evitar bloqueio de popup
-  var a = document.createElement('a');
-  a.href = url;
-  a.target = '_blank';
-  a.rel = 'noopener';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+}
+
+function abrirGoogleMaps() {
+  if(!currentRotaPostos || !currentRotaPostos.length) { showToast('⚠️ Nenhum posto selecionado','error'); return; }
+  var url = _buildMapsUrl(currentRotaPostos);
+  if(!url) return;
+  var opened = window.open(url, '_blank');
+  if(!opened) {
+    // Popup bloqueado — mostra link clicável no modal
+    var el = document.getElementById('rotaModalContent');
+    if(el) {
+      el.innerHTML += '<div style="margin-top:14px;padding:12px;background:rgba(245,158,11,0.1);border:1px solid var(--accent);border-radius:8px;font-size:13px">' +
+        '⚠️ Popup bloqueado pelo navegador. <a href="'+url+'" target="_blank" rel="noopener" style="color:var(--accent);font-weight:700;text-decoration:underline">Clique aqui para abrir o Google Maps →</a></div>';
+    } else {
+      showToast('Popup bloqueado! Verifique o endereço.', 'error');
+    }
+  }
+}
+
+function abrirGoogleMapsModal() {
+  if(!currentRotaPostos || !currentRotaPostos.length) return;
+  var url = _buildMapsUrl(currentRotaPostos);
+  if(!url) return;
+  // Injeta link clicável direto no modal (mais confiável que window.open)
+  var container = document.getElementById('rotaModalContent');
+  // Remove link anterior se existir
+  var prev = document.getElementById('gmapsLinkBox');
+  if(prev) prev.remove();
+  var box = document.createElement('div');
+  box.id = 'gmapsLinkBox';
+  box.style.cssText = 'margin-top:14px;padding:14px 16px;background:rgba(59,130,246,0.1);border:1px solid #3b82f6;border-radius:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap';
+  box.innerHTML = '<span style="font-size:20px">🗺️</span>' +
+    '<div style="flex:1"><div style="font-size:13px;font-weight:600;margin-bottom:4px">Link da rota pronto:</div>' +
+    '<a href="'+url+'" target="_blank" rel="noopener" style="color:#3b82f6;font-size:12px;word-break:break-all;text-decoration:underline">'+url.substring(0,80)+'...</a></div>' +
+    '<a href="'+url+'" target="_blank" rel="noopener" style="padding:8px 18px;background:#3b82f6;color:#fff;border-radius:6px;font-family:Barlow Condensed,sans-serif;font-weight:700;font-size:14px;text-decoration:none;white-space:nowrap">Abrir →</a>';
+  if(container) container.appendChild(box);
+  // Tenta abrir mesmo assim
+  window.open(url, '_blank');
 }
 
 function iniciarRota(rotaId) {
@@ -1704,6 +1736,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
   // Modal fecha com clique fora
   document.getElementById('rotaModal').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
+
+  // Versão para debug
+  console.log('[MS Rotas v3.1] Carregado. Funções: geocodificar='+typeof geocodificar+' analisarRotaPorGeo='+typeof analisarRotaPorGeo+' abrirGoogleMaps='+typeof abrirGoogleMaps);
 });
 </script>
 
