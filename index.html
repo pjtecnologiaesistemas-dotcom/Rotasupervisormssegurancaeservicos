@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supervisor de Rotas — Grupo M.S Segurança</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e2d45;
+    --accent: #f59e0b;
+    --accent2: #3b82f6;
+    --green: #10b981;
+    --red: #ef4444;
+    --purple: #8b5cf6;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --rota1: #3b82f6;
+    --rota2: #10b981;
+    --rota3: #f59e0b;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Barlow',sans-serif; min-height:100vh; }
+
+  /* HEADER */
+  header {
+    background:var(--surface); border-bottom:2px solid var(--accent);
+    padding:0 24px; display:flex; align-items:center; justify-content:space-between;
+    height:60px; position:sticky; top:0; z-index:100;
+  }
+  .logo { display:flex; align-items:center; gap:12px; }
+  .logo-icon { width:36px;height:36px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;color:#000;font-size:16px; }
+  .logo-text { font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;letter-spacing:1px; }
+  .logo-text span { color:var(--accent); }
+  .header-date { font-size:13px;color:var(--muted); }
+
+  /* TABS */
+  .tabs { display:flex;background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;gap:4px;overflow-x:auto; }
+  .tab { padding:12px 18px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;transition:all 0.2s;white-space:nowrap; }
+  .tab.active { color:var(--accent);border-bottom-color:var(--accent); }
+  .tab:hover:not(.active) { color:var(--text); }
+
+  /* PANELS */
+  .panel { display:none; }
+  .panel.active { display:block; }
+  .container { max-width:1400px;margin:0 auto;padding:24px; }
+
+  /* MAP */
+  .map-layout { display:grid;grid-template-columns:320px 1fr;gap:20px;height:calc(100vh - 120px); }
+  @media(max-width:900px){ .map-layout{grid-template-columns:1fr;height:auto;} }
+  .sidebar { background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow-y:auto;display:flex;flex-direction:column; }
+  .sidebar-header { padding:16px;border-bottom:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:0.5px;color:var(--accent);display:flex;align-items:center;justify-content:space-between; }
+  .sidebar-filters { padding:10px 16px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap; }
+  .filter-btn { padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid;transition:all 0.15s;background:none;font-family:'Barlow',sans-serif; }
+  .filter-btn.active { color:#000!important; }
+
+  .posto-item { padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;display:flex;align-items:flex-start;gap:10px; }
+  .posto-item:hover { background:var(--surface2); }
+  .posto-item.selected { background:var(--surface2);border-left:3px solid var(--accent); }
+  .posto-badge { width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:2px;color:#fff; }
+  .posto-info { flex:1;min-width:0; }
+  .posto-name { font-weight:600;font-size:13px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .posto-city { font-size:11px;color:var(--muted);margin-top:2px; }
+  .posto-rota-tag { font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;white-space:nowrap;flex-shrink:0;margin-top:4px;align-self:flex-start; }
+
+  #map { border-radius:10px;border:1px solid var(--border);width:100%;height:100%;min-height:500px; }
+
+  /* MAP CONTROLS */
+  .map-controls { display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px; }
+  .map-ctrl-btn { padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;font-family:'Barlow Condensed',sans-serif;font-weight:600;cursor:pointer;transition:all 0.15s;letter-spacing:0.3px; }
+  .map-ctrl-btn:hover { background:var(--surface2); }
+  .map-ctrl-btn.active { border-color:currentColor; }
+
+  /* ROTAS */
+  .rotas-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px; }
+  .rota-card { background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden; }
+  .rota-card-header { padding:16px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border); }
+  .rota-num { width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#fff;flex-shrink:0; }
+  .rota-title { flex:1; }
+  .rota-title h3 { font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700; }
+  .rota-title p { font-size:12px;color:var(--muted);margin-top:2px; }
+  .rota-dias { display:flex;flex-wrap:wrap;gap:4px;padding:12px 20px;border-bottom:1px solid var(--border); }
+  .dia-tag { padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid; }
+  .rota-postos { padding:8px 0; }
+  .rota-posto-row { display:flex;align-items:center;gap:10px;padding:8px 20px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s; }
+  .rota-posto-row:last-child { border-bottom:none; }
+  .rota-posto-row:hover { background:var(--surface2); }
+  .rota-seq { width:20px;font-size:11px;color:var(--muted);font-weight:600;text-align:center; }
+  .rota-posto-name { flex:1;font-size:13px;font-weight:500; }
+  .rota-posto-city { font-size:11px;color:var(--muted); }
+  .btn-checklist { background:none;border:1px solid var(--border);color:var(--text);padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;transition:all 0.15s;font-family:'Barlow',sans-serif; }
+  .btn-checklist:hover { background:var(--accent);border-color:var(--accent);color:#000; }
+  .rota-card-footer { padding:12px 20px;background:rgba(0,0,0,0.2);display:flex;gap:8px;flex-wrap:wrap; }
+  .btn-rota { flex:1;min-width:120px;padding:8px;border-radius:6px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px; }
+
+  /* CHECKLIST */
+  .checklist-header { display:flex;align-items:center;gap:16px;margin-bottom:24px;flex-wrap:wrap; }
+  .checklist-select { background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:8px;font-family:'Barlow',sans-serif;font-size:14px;cursor:pointer;flex:1;min-width:200px; }
+  .checklist-select:focus { outline:none;border-color:var(--accent); }
+  .checklist-card { background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;max-width:700px;margin:0 auto; }
+  .checklist-card-header { padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px; }
+  .checklist-card-header h2 { font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700; }
+  .checklist-card-header p { font-size:12px;color:var(--muted);margin-top:2px; }
+  .checklist-meta { padding:14px 24px;display:grid;grid-template-columns:1fr 1fr;gap:12px;background:var(--surface2);border-bottom:1px solid var(--border); }
+  .meta-field label { display:block;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px; }
+  .meta-field input { background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;width:100%; }
+  .meta-field input:focus { outline:none;border-color:var(--accent); }
+  .checklist-section { padding:16px 24px;border-bottom:1px solid var(--border); }
+  .checklist-section h4 { font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px; }
+  .check-item { display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04); }
+  .check-item:last-child { border-bottom:none; }
+  .check-item input[type="checkbox"] { width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0; }
+  .check-item label { font-size:13px;cursor:pointer;flex:1; }
+  .check-item input[type="checkbox"]:checked + label { color:var(--muted);text-decoration:line-through; }
+  .check-item select { background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:3px 6px;border-radius:4px;font-size:11px;font-family:'Barlow',sans-serif; }
+  .obs-area { padding:16px 24px;border-bottom:1px solid var(--border); }
+  .obs-area label { display:block;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px; }
+  .obs-area textarea { width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px;border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;resize:vertical;min-height:80px; }
+  .obs-area textarea:focus { outline:none;border-color:var(--accent); }
+  .checklist-footer { padding:16px 24px;display:flex;gap:10px;flex-wrap:wrap; }
+  .progress-bar { height:4px;background:var(--border);border-radius:2px;margin:8px 24px;overflow:hidden; }
+  .progress-fill { height:100%;background:var(--accent);border-radius:2px;transition:width 0.3s; }
+
+  /* GESTÃO DE POSTOS */
+  .gestao-layout { display:grid;grid-template-columns:420px 1fr;gap:24px; }
+  @media(max-width:900px){ .gestao-layout{grid-template-columns:1fr;} }
+  .form-card { background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden; }
+  .form-card-header { padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px; }
+  .form-card-header h3 { font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700; }
+  .form-body { padding:20px; }
+  .form-group { margin-bottom:14px; }
+  .form-group label { display:block;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px; }
+  .form-group label .req { color:var(--accent); }
+  .form-input { width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:7px;font-family:'Barlow',sans-serif;font-size:13px;transition:border-color 0.15s; }
+  .form-input:focus { outline:none;border-color:var(--accent); }
+  .form-select { width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:7px;font-family:'Barlow',sans-serif;font-size:13px;cursor:pointer;appearance:none; }
+  .form-grid-2 { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
+  .geocode-row { display:flex;gap:8px;align-items:flex-end; }
+  .geocode-row .form-input { flex:1; }
+  .btn-geocode { padding:9px 14px;border-radius:7px;border:none;background:var(--accent2);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all 0.2s; }
+  .btn-geocode:hover { background:#2563eb; }
+  .geocode-status { font-size:11px;margin-top:4px;min-height:16px; }
+  .coords-preview { background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--muted);margin-top:4px;font-family:monospace;display:none; }
+
+  .postos-list-card { background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden; }
+  .postos-list-header { padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between; }
+  .postos-list-header h3 { font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700; }
+  .postos-table-wrap { overflow-x:auto; }
+  .postos-table { width:100%;border-collapse:collapse; }
+  .postos-table th { background:var(--surface2);padding:10px 14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap; }
+  .postos-table td { padding:10px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle; }
+  .postos-table tr:last-child td { border-bottom:none; }
+  .postos-table tr:hover td { background:var(--surface2); }
+  .tag-tipo { display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600; }
+  .tag-base { background:rgba(100,116,139,0.15);color:var(--muted); }
+  .tag-custom { background:rgba(245,158,11,0.15);color:var(--accent); }
+  .btn-delete-posto { background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:var(--red);padding:3px 8px;border-radius:4px;font-size:11px;cursor:pointer;transition:all 0.15s;font-family:'Barlow',sans-serif; }
+  .btn-delete-posto:hover { background:var(--red);color:#fff; }
+  .btn-edit-posto { background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);color:var(--accent);padding:3px 8px;border-radius:4px;font-size:11px;cursor:pointer;transition:all 0.15s;font-family:'Barlow',sans-serif; }
+  .btn-edit-posto:hover { background:var(--accent);color:#000; }
+  .badge-base { background:rgba(100,116,139,0.2);color:var(--muted);font-size:10px;padding:1px 6px;border-radius:3px; }
+  .badge-custom { background:rgba(245,158,11,0.2);color:var(--accent);font-size:10px;padding:1px 6px;border-radius:3px; }
+
+  /* IA DE ROTAS */
+  .ia-layout { display:grid;grid-template-columns:300px 1fr;gap:24px; }
+  @media(max-width:900px){ .ia-layout{grid-template-columns:1fr;} }
+  .ia-config-card { background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;height:fit-content; }
+  .ia-config-header { padding:16px 20px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,rgba(139,92,246,0.15),rgba(59,130,246,0.1)); }
+  .ia-config-header h3 { font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;color:var(--purple); }
+  .ia-config-header p { font-size:12px;color:var(--muted);margin-top:3px; }
+  .ia-config-body { padding:16px 20px; }
+  .config-field { margin-bottom:14px; }
+  .config-field label { display:block;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px; }
+  .config-input { width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px; }
+  .config-input:focus { outline:none;border-color:var(--purple); }
+  .api-key-wrap { position:relative; }
+  .api-key-wrap input { padding-right:36px; }
+  .toggle-key { position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px; }
+  .btn-ia { width:100%;padding:11px;border-radius:8px;border:none;background:linear-gradient(135deg,#8b5cf6,#3b82f6);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:0.5px;cursor:pointer;transition:all 0.2s;margin-top:4px; }
+  .btn-ia:hover { opacity:0.9;transform:translateY(-1px); }
+  .btn-ia:disabled { opacity:0.5;cursor:not-allowed;transform:none; }
+  .ia-divider { border-top:1px solid var(--border);margin:14px 0; }
+  .ia-label-section { font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px; }
+
+  .ia-results { min-height:300px; }
+  .ia-placeholder { display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:400px;color:var(--muted);gap:12px;text-align:center; }
+  .ia-placeholder .icon { font-size:56px;opacity:0.4; }
+  .ia-placeholder p { font-size:14px;max-width:280px;line-height:1.6; }
+
+  .ia-rota-card { background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:16px;overflow:hidden; }
+  .ia-rota-header { padding:14px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border); }
+  .ia-rota-num { width:36px;height:36px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:#fff; }
+  .ia-rota-info { flex:1; }
+  .ia-rota-info h3 { font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700; }
+  .ia-rota-info p { font-size:12px;color:var(--muted);margin-top:2px; }
+  .ia-stats { display:flex;gap:16px;flex-wrap:wrap; }
+  .ia-stat { text-align:center; }
+  .ia-stat .val { font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;line-height:1; }
+  .ia-stat .lbl { font-size:10px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:0.3px; }
+
+  .ia-days-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;padding:14px 18px; }
+  .ia-day-card { background:var(--surface2);border:1px solid var(--border);border-radius:7px;overflow:hidden; }
+  .ia-day-header { padding:8px 12px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;border-bottom:1px solid var(--border); }
+  .ia-day-body { padding:8px 12px; }
+  .ia-day-posto { font-size:12px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:6px; }
+  .ia-day-posto:last-child { border-bottom:none; }
+  .ia-day-km { padding:6px 12px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);background:rgba(0,0,0,0.15); }
+
+  .ia-ai-analysis { background:linear-gradient(135deg,rgba(139,92,246,0.08),rgba(59,130,246,0.05));border:1px solid rgba(139,92,246,0.3);border-radius:10px;padding:18px 20px;margin-top:20px; }
+  .ia-ai-header { display:flex;align-items:center;gap:10px;margin-bottom:12px; }
+  .ia-ai-header h3 { font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--purple); }
+  .ia-ai-content { font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap; }
+  .ia-loading { display:flex;align-items:center;gap:10px;color:var(--purple);font-size:13px; }
+  .spinner { width:18px;height:18px;border:2px solid rgba(139,92,246,0.3);border-top-color:var(--purple);border-radius:50%;animation:spin 0.8s linear infinite; }
+  @keyframes spin { to{transform:rotate(360deg);} }
+
+  .ia-route-order { padding:0 18px 14px; }
+  .ia-route-order h4 { font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px; }
+  .ia-order-list { display:flex;flex-wrap:wrap;gap:6px; }
+  .ia-order-chip { display:flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:11px; }
+  .ia-order-chip .num { font-weight:700;font-size:10px;color:var(--muted); }
+  .ia-arrow { color:var(--muted);font-size:10px; }
+
+  /* HISTÓRICO */
+  .historico-table-wrapper { background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden; }
+  table { width:100%;border-collapse:collapse; }
+  th { background:var(--surface2);padding:12px 16px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);text-align:left;border-bottom:1px solid var(--border); }
+  td { padding:12px 16px;font-size:13px;border-bottom:1px solid var(--border); }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:var(--surface2); }
+  .badge { display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600; }
+  .badge-ok { background:rgba(16,185,129,0.15);color:var(--green); }
+  .badge-pend { background:rgba(245,158,11,0.15);color:var(--accent); }
+
+  /* BUTTONS */
+  .btn { padding:10px 20px;border-radius:7px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;cursor:pointer;transition:all 0.2s; }
+  .btn-primary { background:var(--accent);color:#000; }
+  .btn-primary:hover { background:#fbbf24; }
+  .btn-secondary { background:var(--surface2);color:var(--text);border:1px solid var(--border); }
+  .btn-secondary:hover { background:var(--border); }
+  .btn-success { background:var(--green);color:#fff; }
+  .btn-success:hover { background:#059669; }
+  .btn-danger { background:var(--red);color:#fff; }
+
+  /* MODAL */
+  .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;padding:20px; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:var(--surface);border:1px solid var(--border);border-radius:12px;max-width:680px;width:100%;max-height:90vh;overflow-y:auto;animation:fadeIn 0.2s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:scale(0.96);}to{opacity:1;transform:scale(1);} }
+  .modal-header { padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between; }
+  .modal-header h2 { font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700; }
+  .modal-close { background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;transition:color 0.15s; }
+  .modal-close:hover { color:var(--text); }
+
+  /* EMPTY */
+  .empty-state { text-align:center;padding:48px 24px;color:var(--muted); }
+  .empty-state .icon { font-size:48px;margin-bottom:12px; }
+  .empty-state p { font-size:14px; }
+
+  /* TOAST */
+  .toast { position:fixed;bottom:24px;right:24px;background:var(--green);color:#fff;padding:12px 20px;border-radius:8px;font-weight:600;font-size:14px;z-index:999;transform:translateY(80px);opacity:0;transition:all 0.3s; }
+  .toast.show { transform:translateY(0);opacity:1; }
+  .toast.error { background:var(--red); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width:6px;height:6px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--border);border-radius:3px; }
+  ::-webkit-scrollbar-thumb:hover { background:var(--muted); }
+
+  /* SECTION TITLE */
+  .section-title { font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;margin-bottom:20px; }
+  .section-subtitle { display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">MS</div>
+    <div class="logo-text">Grupo M.S <span>Segurança</span></div>
+  </div>
+  <div class="header-date" id="headerDate"></div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('mapa',this)">🗺️ Mapa</div>
+  <div class="tab" onclick="showTab('rotas',this)">🚗 Rotas Semanais</div>
+  <div class="tab" onclick="showTab('postos',this)">📍 Gestão de Postos</div>
+  <div class="tab" onclick="showTab('ia',this)">🧠 IA de Rotas</div>
+  <div class="tab" onclick="showTab('checklist',this)">✅ Checklist</div>
+  <div class="tab" onclick="showTab('historico',this)">📋 Histórico</div>
+</div>
+
+<!-- ===== MAPA ===== -->
+<div id="panel-mapa" class="panel active">
+  <div class="container" style="padding-top:16px">
+    <div class="map-controls">
+      <button class="map-ctrl-btn" onclick="filtrarMapaRota(0)" id="mapBtnTodos" style="border-color:var(--accent);color:var(--accent)">● Todos</button>
+      <button class="map-ctrl-btn" onclick="filtrarMapaRota(1)" id="mapBtn1" style="color:#3b82f6">● Alpha</button>
+      <button class="map-ctrl-btn" onclick="filtrarMapaRota(2)" id="mapBtn2" style="color:#10b981">● Beta</button>
+      <button class="map-ctrl-btn" onclick="filtrarMapaRota(3)" id="mapBtn3" style="color:#f59e0b">● Gamma</button>
+      <button class="map-ctrl-btn" onclick="togglePolylines()" id="btnPolylines">〰 Mostrar Rotas</button>
+      <button class="map-ctrl-btn" onclick="centralizarMapa()" style="margin-left:auto">⌖ Centralizar</button>
+    </div>
+    <div class="map-layout" style="height:calc(100vh - 175px)">
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <span id="sidebarCount">📍 — Postos</span>
+        </div>
+        <div class="sidebar-filters">
+          <button class="filter-btn active" id="fbTodos" onclick="filtrarSidebar('todos',this)" style="color:var(--text);border-color:var(--border)">Todos</button>
+          <button class="filter-btn" id="fb1" onclick="filtrarSidebar('1',this)" style="color:#3b82f6;border-color:#3b82f6">Alpha</button>
+          <button class="filter-btn" id="fb2" onclick="filtrarSidebar('2',this)" style="color:#10b981;border-color:#10b981">Beta</button>
+          <button class="filter-btn" id="fb3" onclick="filtrarSidebar('3',this)" style="color:#f59e0b;border-color:#f59e0b">Gamma</button>
+        </div>
+        <div id="postosList"></div>
+      </div>
+      <div id="map"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ROTAS SEMANAIS ===== -->
+<div id="panel-rotas" class="panel">
+  <div class="container">
+    <h2 class="section-title">Planejamento de Rotas Semanais</h2>
+    <div class="rotas-grid" id="rotasGrid"></div>
+  </div>
+</div>
+
+<!-- ===== GESTÃO DE POSTOS ===== -->
+<div id="panel-postos" class="panel">
+  <div class="container">
+    <h2 class="section-title">Gestão de Postos</h2>
+    <div class="gestao-layout">
+      <!-- Formulário -->
+      <div>
+        <div class="form-card" id="formCardPosto">
+          <div class="form-card-header">
+            <span style="font-size:20px">📍</span>
+            <h3 id="formCardTitle">Cadastrar Novo Posto</h3>
+          </div>
+          <div class="form-body">
+            <input type="hidden" id="editingPostoId" value="">
+            <div class="form-group">
+              <label>Nome do Posto <span class="req">*</span></label>
+              <input class="form-input" id="pNome" placeholder="Ex: Residencial Jardim Europa" />
+            </div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label>Cidade <span class="req">*</span></label>
+                <input class="form-input" id="pCidade" placeholder="Ex: Mogi Guaçu" />
+              </div>
+              <div class="form-group">
+                <label>Tipo <span class="req">*</span></label>
+                <select class="form-select" id="pTipo">
+                  <option value="">— Selecione —</option>
+                  <option value="Residencial">Residencial</option>
+                  <option value="Comercial">Comercial</option>
+                  <option value="Industrial">Industrial</option>
+                  <option value="Condomínio">Condomínio</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Rota <span class="req">*</span></label>
+              <select class="form-select" id="pRota">
+                <option value="">— Selecione a Rota —</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Endereço para Localização</label>
+              <div class="geocode-row">
+                <input class="form-input" id="pEndereco" placeholder="Endereço completo para geocodificar..." />
+                <button class="btn-geocode" onclick="geocodificar()">📍 Localizar</button>
+              </div>
+              <div class="geocode-status" id="geocodeStatus"></div>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label>Latitude <span class="req">*</span></label>
+                <input class="form-input" id="pLat" placeholder="-22.378214" type="number" step="any" />
+              </div>
+              <div class="form-group">
+                <label>Longitude <span class="req">*</span></label>
+                <input class="form-input" id="pLng" placeholder="-46.949690" type="number" step="any" />
+              </div>
+            </div>
+            <div class="coords-preview" id="coordsPreview"></div>
+            <div style="display:flex;gap:8px;margin-top:4px">
+              <button class="btn btn-primary" style="flex:1" onclick="salvarPosto()">💾 Salvar Posto</button>
+              <button class="btn btn-secondary" onclick="cancelarEdicao()" id="btnCancelarEdicao" style="display:none">✕ Cancelar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Legenda de rotas -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-top:16px">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Rotas Cadastradas</div>
+          <div id="rotasLegenda"></div>
+        </div>
+      </div>
+
+      <!-- Lista de postos -->
+      <div class="postos-list-card">
+        <div class="postos-list-header">
+          <h3 id="postosListTitle">Todos os Postos</h3>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-family:'Barlow',sans-serif;font-size:12px;width:180px" placeholder="🔍 Buscar posto..." id="buscaPosto" oninput="renderPostosList()" />
+          </div>
+        </div>
+        <div class="postos-table-wrap">
+          <table class="postos-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Nome</th>
+                <th>Cidade</th>
+                <th>Tipo</th>
+                <th>Rota</th>
+                <th>Origem</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="postosTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== IA DE ROTAS ===== -->
+<div id="panel-ia" class="panel">
+  <div class="container">
+    <h2 class="section-title">🧠 Inteligência de Rotas</h2>
+    <div class="ia-layout">
+      <!-- Config -->
+      <div>
+        <div class="ia-config-card">
+          <div class="ia-config-header">
+            <h3>⚙️ Configurações</h3>
+            <p>Parâmetros para cálculo de rotas</p>
+          </div>
+          <div class="ia-config-body">
+            <div class="config-field">
+              <label>⏰ Horas de Trabalho por Dia</label>
+              <input class="config-input" id="cfgHoras" type="number" value="8" min="4" max="12" step="0.5" />
+            </div>
+            <div class="config-field">
+              <label>🏢 Tempo por Posto (minutos)</label>
+              <input class="config-input" id="cfgTempoPosto" type="number" value="30" min="10" max="120" step="5" />
+            </div>
+            <div class="config-field">
+              <label>🚗 Deslocamento entre postos (min)</label>
+              <input class="config-input" id="cfgTempoDeslocamento" type="number" value="15" min="5" max="60" step="5" />
+            </div>
+            <div class="config-field">
+              <label>📏 Velocidade média (km/h)</label>
+              <input class="config-input" id="cfgVelocidade" type="number" value="50" min="20" max="120" step="5" />
+            </div>
+            <div class="ia-divider"></div>
+            <div class="ia-label-section">🤖 Análise com IA (opcional)</div>
+            <div class="config-field">
+              <label>Chave API Anthropic</label>
+              <div class="api-key-wrap">
+                <input class="config-input" id="cfgApiKey" type="password" placeholder="sk-ant-api03-..." value="" />
+                <button class="toggle-key" onclick="toggleApiKeyVis()">👁</button>
+              </div>
+              <div style="font-size:11px;color:var(--muted);margin-top:4px">
+                Opcional. Com a chave, Claude analisa e sugere melhorias nas rotas.
+                <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">Obter chave →</a>
+              </div>
+            </div>
+            <button class="btn-ia" onclick="calcularInteligencia()" id="btnIa">🧠 Calcular Planejamento</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resultados -->
+      <div id="iaResultados" class="ia-results">
+        <div class="ia-placeholder">
+          <div class="icon">🧠</div>
+          <p>Configure os parâmetros e clique em <strong>Calcular Planejamento</strong> para ver a distribuição inteligente de visitas por dia e a ordem otimizada de cada rota.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CHECKLIST ===== -->
+<div id="panel-checklist" class="panel">
+  <div class="container">
+    <div class="checklist-header">
+      <h2 style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700">Checklist de Visita</h2>
+      <select class="checklist-select" id="postosSelect" onchange="renderChecklist()">
+        <option value="">— Selecione o posto —</option>
+      </select>
+    </div>
+    <div id="checklistArea"></div>
+  </div>
+</div>
+
+<!-- ===== HISTÓRICO ===== -->
+<div id="panel-historico" class="panel">
+  <div class="container">
+    <div class="section-subtitle">
+      <h2 style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700">Histórico de Visitas</h2>
+      <button class="btn btn-danger" onclick="limparHistorico()">🗑️ Limpar Tudo</button>
+    </div>
+    <div class="historico-table-wrapper">
+      <div id="historicoContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL Rota no Mapa -->
+<div class="modal-overlay" id="rotaModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="rotaModalTitle">Abrir Rota no Google Maps</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div style="padding:20px 24px" id="rotaModalContent"></div>
+    <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="abrirGoogleMaps()">🗺️ Abrir no Google Maps</button>
+      <button class="btn btn-secondary" onclick="closeModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ===== SCRIPTS ===== -->
+<script>
+// ================================================================
+// DADOS BASE (hardcoded)
+// ================================================================
+var POSTOS_BASE = [
+  { id:1,  nome:"Residencial Vale Verde",  cidade:"Mogi Guaçu", lat:-22.378214, lng:-46.94969,  rota:1, tipo:"Residencial" },
+  { id:2,  nome:"Morro Vermelho II",       cidade:"Mogi Guaçu", lat:-22.407241, lng:-46.941305, rota:1, tipo:"Residencial" },
+  { id:3,  nome:"Jardim da Colina",        cidade:"Mogi Mirim", lat:-22.431314, lng:-46.978112, rota:3, tipo:"Residencial" },
+  { id:4,  nome:"Icobit Brasil",           cidade:"Mogi Guaçu", lat:-22.295264, lng:-46.972014, rota:2, tipo:"Industrial"  },
+  { id:5,  nome:"HFM Logística",           cidade:"Mogi Guaçu", lat:-22.306621, lng:-46.967074, rota:2, tipo:"Industrial"  },
+  { id:6,  nome:"CRK Baseio",              cidade:"Mogi Guaçu", lat:-22.326693, lng:-46.960720, rota:2, tipo:"Industrial"  },
+  { id:7,  nome:"Portal das Hadassas",     cidade:"Mogi Guaçu", lat:-22.359704, lng:-46.961635, rota:1, tipo:"Residencial" },
+  { id:8,  nome:"Portal das Zinias",       cidade:"Mogi Guaçu", lat:-22.360438, lng:-46.961302, rota:1, tipo:"Residencial" },
+  { id:9,  nome:"Clube Oregon",            cidade:"Mogi Guaçu", lat:-22.364873, lng:-46.956757, rota:1, tipo:"Residencial" },
+  { id:10, nome:"Reserva Central",         cidade:"Mogi Guaçu", lat:-22.371433, lng:-46.950728, rota:1, tipo:"Residencial" },
+  { id:11, nome:"Reserva do Lago",         cidade:"Mogi Guaçu", lat:-22.357025, lng:-46.910385, rota:2, tipo:"Residencial" },
+  { id:12, nome:"Residencial San Remo",    cidade:"Mogi Guaçu", lat:-22.362256, lng:-46.933986, rota:2, tipo:"Residencial" },
+  { id:13, nome:"W Park",                  cidade:"Mogi Mirim", lat:-22.445305, lng:-47.020787, rota:3, tipo:"Industrial"  },
+  { id:14, nome:"Irmãos Davoli",           cidade:"Mogi Mirim", lat:-22.462016, lng:-46.982527, rota:3, tipo:"Comercial"   },
+  { id:15, nome:"Fazenda Paineiras",       cidade:"Mogi Mirim", lat:-22.464066, lng:-46.959464, rota:3, tipo:"Residencial" }
+];
+
+var ROTAS = [
+  { id:1, nome:"Rota Alpha", cor:"#3b82f6", corBg:"rgba(59,130,246,0.15)",  dias:["Segunda-feira","Quarta-feira","Sexta-feira"],   postos:[7,8,9,10,1,2],    descricao:"Postos residenciais sul de Mogi Guaçu" },
+  { id:2, nome:"Rota Beta",  cor:"#10b981", corBg:"rgba(16,185,129,0.15)",  dias:["Terça-feira","Quinta-feira"],                   postos:[4,5,6,11,12],     descricao:"Industrial + residenciais leste" },
+  { id:3, nome:"Rota Gamma", cor:"#f59e0b", corBg:"rgba(245,158,11,0.15)",  dias:["Segunda-feira","Quinta-feira","Sábado"],        postos:[3,13,14,15],      descricao:"Postos em Mogi Mirim" }
+];
+
+// ================================================================
+// POSTOS DINÂMICOS (base + custom localStorage)
+// ================================================================
+var POSTOS_CUSTOM = [];
+var POSTOS = [];
+
+function loadCustomPostos() {
+  POSTOS_CUSTOM = JSON.parse(localStorage.getItem('ms_postos_custom') || '[]');
+}
+function saveCustomPostos() {
+  localStorage.setItem('ms_postos_custom', JSON.stringify(POSTOS_CUSTOM));
+}
+function buildPostos() {
+  POSTOS = POSTOS_BASE.concat(POSTOS_CUSTOM);
+}
+function getPostoById(id) {
+  return POSTOS.find(function(p){ return p.id === id; });
+}
+function nextPostoId() {
+  var maxId = 0;
+  POSTOS.forEach(function(p){ if(p.id > maxId) maxId = p.id; });
+  return maxId + 1;
+}
+function isCustom(posto) {
+  return POSTOS_CUSTOM.some(function(c){ return c.id === posto.id; });
+}
+
+// ================================================================
+// GOOGLE MAPS
+// ================================================================
+var map, markers = [], infoWindow, polylines = [], polylinesVisible = false, currentMapFilter = 0;
+var currentRotaPostos = [];
+
+function initMap() {
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: { lat:-22.38, lng:-46.96 }, zoom:12,
+    styles:[
+      {elementType:'geometry',stylers:[{color:'#1a2235'}]},
+      {elementType:'labels.text.fill',stylers:[{color:'#8ec3b9'}]},
+      {elementType:'labels.text.stroke',stylers:[{color:'#1a3646'}]},
+      {featureType:'road',elementType:'geometry',stylers:[{color:'#304a7d'}]},
+      {featureType:'water',elementType:'geometry',stylers:[{color:'#0e1626'}]},
+      {featureType:'poi',stylers:[{visibility:'off'}]}
+    ]
+  });
+  infoWindow = new google.maps.InfoWindow();
+  renderMarkers();
+}
+
+function renderMarkers() {
+  markers.forEach(function(m){ m.marker.setMap(null); });
+  markers = [];
+  POSTOS.forEach(function(posto){
+    var rota = ROTAS.find(function(r){ return r.id === posto.rota; });
+    var cor = rota ? rota.cor : '#64748b';
+    var marker = new google.maps.Marker({
+      position:{ lat:posto.lat, lng:posto.lng },
+      map: map,
+      title: posto.nome,
+      icon:{
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 10,
+        fillColor: cor,
+        fillOpacity: 1,
+        strokeColor: isCustom(posto) ? '#f59e0b' : '#fff',
+        strokeWeight: isCustom(posto) ? 3 : 2
+      },
+      label:{ text:String(posto.id), color:'#fff', fontWeight:'bold', fontSize:'10px' }
+    });
+    marker.addListener('click', function(){
+      var r2 = rota || { nome:'—', corBg:'rgba(100,116,139,0.1)', cor:'#64748b' };
+      infoWindow.setContent(
+        '<div style="background:#111827;color:#e2e8f0;padding:10px 14px;border-radius:6px;font-family:Barlow,sans-serif;min-width:180px">'+
+        '<div style="font-weight:700;font-size:14px;margin-bottom:2px">'+posto.nome+'</div>'+
+        '<div style="font-size:11px;color:#64748b">'+posto.cidade+' · '+posto.tipo+'</div>'+
+        (isCustom(posto)? '<div style="font-size:10px;color:#f59e0b;margin-top:2px">★ Posto personalizado</div>':'')+
+        '<div style="margin-top:8px;font-size:11px;background:'+r2.corBg+';color:'+r2.cor+';padding:3px 8px;border-radius:4px;display:inline-block;font-weight:600">'+r2.nome+'</div>'+
+        '<br><button onclick="selecionarChecklistExterno('+posto.id+')" style="margin-top:10px;background:'+r2.cor+';border:none;color:'+(r2.id===3?'#000':'#fff')+';padding:5px 12px;border-radius:4px;font-size:12px;cursor:pointer;font-family:Barlow,sans-serif;font-weight:600">✅ Checklist</button>'+
+        '</div>'
+      );
+      infoWindow.open(map, marker);
+    });
+    markers.push({ id:posto.id, marker:marker, rota:posto.rota });
+  });
+}
+
+function renderPolylines() {
+  polylines.forEach(function(pl){ pl.setMap(null); });
+  polylines = [];
+  if(!map) return;
+  ROTAS.forEach(function(rota){
+    var postosOrdenados = nearestNeighborAlgo(
+      rota.postos.map(function(pid){ return getPostoById(pid); }).filter(Boolean)
+    );
+    if(postosOrdenados.length < 2) return;
+    var path = postosOrdenados.map(function(p){ return { lat:p.lat, lng:p.lng }; });
+    var pl = new google.maps.Polyline({
+      path: path,
+      geodesic: true,
+      strokeColor: rota.cor,
+      strokeOpacity: 0.75,
+      strokeWeight: 3,
+      map: polylinesVisible ? map : null
+    });
+    polylines.push(pl);
+  });
+}
+
+function togglePolylines() {
+  polylinesVisible = !polylinesVisible;
+  document.getElementById('btnPolylines').textContent = polylinesVisible ? '〰 Ocultar Rotas' : '〰 Mostrar Rotas';
+  if(map) {
+    if(!polylines.length) renderPolylines();
+    polylines.forEach(function(pl){ pl.setMap(polylinesVisible ? map : null); });
+  }
+}
+
+function filtrarMapaRota(rotaId) {
+  currentMapFilter = rotaId;
+  ['mapBtnTodos','mapBtn1','mapBtn2','mapBtn3'].forEach(function(id,i){
+    var el = document.getElementById(id);
+    if(!el) return;
+    var isActive = (i === rotaId);
+    el.style.fontWeight = isActive ? '700' : '';
+    el.style.background = isActive ? 'var(--surface2)' : '';
+  });
+  markers.forEach(function(m){
+    var show = (rotaId === 0 || m.rota === rotaId);
+    m.marker.setMap(show ? map : null);
+  });
+}
+
+function centralizarMapa() {
+  if(map) {
+    map.setCenter({ lat:-22.38, lng:-46.96 });
+    map.setZoom(12);
+  }
+}
+
+function centerPosto(id) {
+  var posto = getPostoById(id);
+  if(!posto || !map) return;
+  map.setCenter({ lat:posto.lat, lng:posto.lng });
+  map.setZoom(16);
+  var m = markers.find(function(m){ return m.id === id; });
+  if(m) google.maps.event.trigger(m.marker, 'click');
+  document.querySelectorAll('.posto-item').forEach(function(el){
+    el.classList.toggle('selected', parseInt(el.dataset.id) === id);
+  });
+}
+
+function selecionarChecklistExterno(id) {
+  var tabs = document.querySelectorAll('.tab');
+  var panels = document.querySelectorAll('.panel');
+  tabs.forEach(function(t){ t.classList.remove('active'); });
+  panels.forEach(function(p){ p.classList.remove('active'); });
+  // activate checklist tab (index 4)
+  tabs[4].classList.add('active');
+  document.getElementById('panel-checklist').classList.add('active');
+  document.getElementById('postosSelect').value = id;
+  renderChecklist();
+}
+
+// ================================================================
+// SIDEBAR
+// ================================================================
+var sidebarFilterRota = 'todos';
+
+function filtrarSidebar(filtro, btn) {
+  sidebarFilterRota = filtro;
+  document.querySelectorAll('.filter-btn').forEach(function(b){ b.classList.remove('active'); b.style.background=''; b.style.color=''; });
+  btn.classList.add('active');
+  if(filtro === 'todos') { btn.style.background='var(--surface2)'; btn.style.color='var(--text)'; }
+  renderSidebar();
+}
+
+function renderSidebar() {
+  var postos = POSTOS;
+  if(sidebarFilterRota !== 'todos') {
+    postos = postos.filter(function(p){ return p.rota === parseInt(sidebarFilterRota); });
+  }
+  var html = '';
+  postos.forEach(function(posto){
+    var rota = ROTAS.find(function(r){ return r.id === posto.rota; });
+    var cor = rota ? rota.cor : '#64748b';
+    var corBg = rota ? rota.corBg : 'rgba(100,116,139,0.15)';
+    var rotaNome = rota ? rota.nome : '—';
+    html += '<div class="posto-item" data-id="'+posto.id+'" onclick="if(window.map){centerPosto('+posto.id+');}else{showTabByName(\'mapa\');setTimeout(function(){centerPosto('+posto.id+')},500);}">' +
+      '<div class="posto-badge" style="background:'+cor+'">'+posto.id+'</div>' +
+      '<div class="posto-info">' +
+        '<div class="posto-name">'+posto.nome+(isCustom(posto)?'<span style="color:var(--accent);font-size:9px;margin-left:4px">★</span>':'')+'</div>' +
+        '<div class="posto-city">'+posto.cidade+' · '+posto.tipo+'</div>' +
+      '</div>' +
+      '<div class="posto-rota-tag" style="background:'+corBg+';color:'+cor+';border-color:'+cor+'">'+rotaNome+'</div>' +
+    '</div>';
+  });
+  document.getElementById('postosList').innerHTML = html || '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Nenhum posto nesta rota</div>';
+  document.getElementById('sidebarCount').textContent = '📍 '+POSTOS.length+' Postos Cadastrados';
+}
+
+// ================================================================
+// ROTAS CARD
+// ================================================================
+function renderRotas() {
+  var html = '';
+  ROTAS.forEach(function(rota){
+    var postosArr = rota.postos.map(function(pid){ return getPostoById(pid); }).filter(Boolean);
+    html += '<div class="rota-card">' +
+      '<div class="rota-card-header">' +
+        '<div class="rota-num" style="background:'+rota.cor+'">R'+rota.id+'</div>' +
+        '<div class="rota-title"><h3>'+rota.nome+'</h3><p>'+rota.descricao+' · <strong>'+postosArr.length+' postos</strong></p></div>' +
+      '</div>' +
+      '<div class="rota-dias">';
+    rota.dias.forEach(function(dia){
+      html += '<span class="dia-tag" style="background:'+rota.corBg+';color:'+rota.cor+';border-color:'+rota.cor+'">'+dia+'</span>';
+    });
+    html += '</div><div class="rota-postos">';
+    postosArr.forEach(function(posto, i){
+      html += '<div class="rota-posto-row">' +
+        '<span class="rota-seq">'+String(i+1).padStart(2,'0')+'</span>' +
+        '<span class="rota-posto-name">'+posto.nome+(isCustom(posto)?'<span style="color:var(--accent);font-size:9px;margin-left:4px">★</span>':'')+'</span>' +
+        '<span class="rota-posto-city">'+posto.cidade+'</span>' +
+        '<button class="btn-checklist" onclick="selecionarChecklistExterno('+posto.id+')">Checklist</button>' +
+      '</div>';
+    });
+    html += '</div>' +
+      '<div class="rota-card-footer">' +
+        '<button class="btn-rota" style="background:'+rota.cor+';color:'+(rota.id===3?'#000':'#fff')+'" onclick="abrirRotaMaps('+rota.id+')">🗺️ Ver Rota</button>' +
+        '<button class="btn-rota btn-secondary" style="background:var(--surface2);border:1px solid var(--border);color:var(--text)" onclick="iniciarRota('+rota.id+')">▶ Google Maps</button>' +
+      '</div>' +
+    '</div>';
+  });
+  document.getElementById('rotasGrid').innerHTML = html;
+}
+
+function abrirRotaMaps(rotaId) {
+  var rota = ROTAS.find(function(r){ return r.id === rotaId; });
+  var postos = rota.postos.map(function(pid){ return getPostoById(pid); }).filter(Boolean);
+  currentRotaPostos = postos;
+  document.getElementById('rotaModalTitle').textContent = rota.nome + ' — '+postos.length+' postos';
+  var html = '<p style="font-size:13px;color:var(--muted);margin-bottom:14px">Paradas na ordem da rota:</p><ol style="padding-left:18px">';
+  postos.forEach(function(p){ html += '<li style="font-size:13px;padding:4px 0">'+p.nome+' <span style="color:var(--muted)">('+p.cidade+')</span></li>'; });
+  html += '</ol>';
+  document.getElementById('rotaModalContent').innerHTML = html;
+  document.getElementById('rotaModal').classList.add('open');
+}
+
+function abrirGoogleMaps() {
+  if(!currentRotaPostos.length) return;
+  var origem = currentRotaPostos[0];
+  var destino = currentRotaPostos[currentRotaPostos.length-1];
+  var waypoints = currentRotaPostos.slice(1,-1).map(function(p){ return p.lat+','+p.lng; }).join('|');
+  var url = 'https://www.google.com/maps/dir/?api=1' +
+    '&origin='+origem.lat+','+origem.lng +
+    '&destination='+destino.lat+','+destino.lng +
+    (waypoints?'&waypoints='+encodeURIComponent(waypoints):'') +
+    '&travelmode=driving';
+  window.open(url,'_blank');
+}
+
+function iniciarRota(rotaId) {
+  var rota = ROTAS.find(function(r){ return r.id === rotaId; });
+  currentRotaPostos = rota.postos.map(function(pid){ return getPostoById(pid); }).filter(Boolean);
+  abrirGoogleMaps();
+}
+
+function closeModal() { document.getElementById('rotaModal').classList.remove('open'); }
+
+// ================================================================
+// GESTÃO DE POSTOS (CRUD)
+// ================================================================
+function renderRotasSelect() {
+  var sel = document.getElementById('pRota');
+  sel.innerHTML = '<option value="">— Selecione a Rota —</option>';
+  ROTAS.forEach(function(r){
+    sel.innerHTML += '<option value="'+r.id+'">'+r.nome+'</option>';
+  });
+}
+
+function renderRotasLegenda() {
+  var html = '';
+  ROTAS.forEach(function(r){
+    var count = POSTOS.filter(function(p){ return p.rota === r.id; }).length;
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">' +
+      '<div style="width:10px;height:10px;border-radius:50%;background:'+r.cor+';flex-shrink:0"></div>' +
+      '<span style="font-size:13px;font-weight:500;flex:1">'+r.nome+'</span>' +
+      '<span style="font-size:12px;color:var(--muted)">'+count+' postos</span>' +
+    '</div>';
+  });
+  document.getElementById('rotasLegenda').innerHTML = html;
+}
+
+function renderPostosList() {
+  var busca = (document.getElementById('buscaPosto').value || '').toLowerCase();
+  var tbody = document.getElementById('postosTableBody');
+  var html = '';
+  var filtered = POSTOS.filter(function(p){
+    return !busca || p.nome.toLowerCase().includes(busca) || p.cidade.toLowerCase().includes(busca) || p.tipo.toLowerCase().includes(busca);
+  });
+  if(!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">Nenhum posto encontrado.</td></tr>';
+    return;
+  }
+  filtered.forEach(function(p){
+    var rota = ROTAS.find(function(r){ return r.id === p.rota; });
+    var custom = isCustom(p);
+    html += '<tr>' +
+      '<td><div class="posto-badge" style="background:'+(rota?rota.cor:'#64748b')+';width:24px;height:24px;font-size:10px">'+p.id+'</div></td>' +
+      '<td><strong>'+p.nome+'</strong>'+(custom?'<span class="badge-custom" style="margin-left:6px">★ Custom</span>':'')+'</td>' +
+      '<td>'+p.cidade+'</td>' +
+      '<td><span class="tag-tipo" style="background:'+(rota?rota.corBg:'rgba(100,116,139,0.1)')+';color:'+(rota?rota.cor:'#64748b')+'">'+p.tipo+'</span></td>' +
+      '<td>'+(rota?'<span style="color:'+rota.cor+';font-weight:600;font-size:12px">'+rota.nome+'</span>':'—')+'</td>' +
+      '<td><span class="'+(custom?'badge-custom':'badge-base')+'">'+( custom?'Personalizado':'Base')+'</span></td>' +
+      '<td><div style="display:flex;gap:4px">' +
+        (custom?'<button class="btn-edit-posto" onclick="editarPosto('+p.id+')">✏️</button><button class="btn-delete-posto" onclick="deletarPosto('+p.id+')">🗑</button>':'<span style="font-size:11px;color:var(--muted)">—</span>')+
+      '</div></td>' +
+    '</tr>';
+  });
+  tbody.innerHTML = html;
+  document.getElementById('postosListTitle').textContent = 'Todos os Postos ('+filtered.length+')';
+}
+
+function salvarPosto() {
+  var editId = document.getElementById('editingPostoId').value;
+  var nome = document.getElementById('pNome').value.trim();
+  var cidade = document.getElementById('pCidade').value.trim();
+  var tipo = document.getElementById('pTipo').value;
+  var rota = parseInt(document.getElementById('pRota').value);
+  var lat = parseFloat(document.getElementById('pLat').value);
+  var lng = parseFloat(document.getElementById('pLng').value);
+
+  if(!nome){ showToast('⚠️ Informe o nome do posto','error'); return; }
+  if(!cidade){ showToast('⚠️ Informe a cidade','error'); return; }
+  if(!tipo){ showToast('⚠️ Selecione o tipo','error'); return; }
+  if(!rota){ showToast('⚠️ Selecione a rota','error'); return; }
+  if(isNaN(lat)||isNaN(lng)){ showToast('⚠️ Coordenadas inválidas. Use o botão Localizar ou preencha manualmente.','error'); return; }
+
+  if(editId) {
+    // Editar posto custom existente
+    var idx = POSTOS_CUSTOM.findIndex(function(p){ return p.id === parseInt(editId); });
+    if(idx >= 0) {
+      POSTOS_CUSTOM[idx] = { id:parseInt(editId), nome:nome, cidade:cidade, tipo:tipo, rota:rota, lat:lat, lng:lng };
+    }
+    showToast('✅ Posto atualizado!');
+  } else {
+    var novo = { id:nextPostoId(), nome:nome, cidade:cidade, tipo:tipo, rota:rota, lat:lat, lng:lng };
+    POSTOS_CUSTOM.push(novo);
+    // Adicionar à rota se não existir
+    var rotaObj = ROTAS.find(function(r){ return r.id === rota; });
+    if(rotaObj && !rotaObj.postos.includes(novo.id)) {
+      rotaObj.postos.push(novo.id);
+    }
+    showToast('✅ Posto "'+nome+'" cadastrado!');
+  }
+
+  saveCustomPostos();
+  buildPostos();
+  reRenderAll();
+  limparFormPosto();
+}
+
+function editarPosto(id) {
+  var p = getPostoById(id);
+  if(!p || !isCustom(p)) return;
+  document.getElementById('editingPostoId').value = id;
+  document.getElementById('pNome').value = p.nome;
+  document.getElementById('pCidade').value = p.cidade;
+  document.getElementById('pTipo').value = p.tipo;
+  document.getElementById('pRota').value = p.rota;
+  document.getElementById('pLat').value = p.lat;
+  document.getElementById('pLng').value = p.lng;
+  document.getElementById('formCardTitle').textContent = 'Editar Posto #'+id;
+  document.getElementById('btnCancelarEdicao').style.display = '';
+  document.getElementById('panel-postos').scrollTo(0,0);
+  window.scrollTo(0,0);
+}
+
+function cancelarEdicao() {
+  limparFormPosto();
+}
+
+function limparFormPosto() {
+  document.getElementById('editingPostoId').value = '';
+  document.getElementById('pNome').value = '';
+  document.getElementById('pCidade').value = '';
+  document.getElementById('pTipo').value = '';
+  document.getElementById('pRota').value = '';
+  document.getElementById('pLat').value = '';
+  document.getElementById('pLng').value = '';
+  document.getElementById('pEndereco').value = '';
+  document.getElementById('geocodeStatus').textContent = '';
+  document.getElementById('coordsPreview').style.display = 'none';
+  document.getElementById('formCardTitle').textContent = 'Cadastrar Novo Posto';
+  document.getElementById('btnCancelarEdicao').style.display = 'none';
+}
+
+function deletarPosto(id) {
+  var p = getPostoById(id);
+  if(!p){ return; }
+  if(!confirm('Excluir o posto "'+p.nome+'"? Esta ação não pode ser desfeita.')){ return; }
+  POSTOS_CUSTOM = POSTOS_CUSTOM.filter(function(c){ return c.id !== id; });
+  ROTAS.forEach(function(r){ r.postos = r.postos.filter(function(pid){ return pid !== id; }); });
+  saveCustomPostos();
+  buildPostos();
+  reRenderAll();
+  showToast('🗑 Posto removido.');
+}
+
+// ================================================================
+// GEOCODIFICAÇÃO (OpenStreetMap Nominatim - sem chave)
+// ================================================================
+function geocodificar() {
+  var endereco = document.getElementById('pEndereco').value.trim();
+  var cidade = document.getElementById('pCidade').value.trim();
+  if(!endereco && !cidade){ showToast('⚠️ Preencha o endereço ou a cidade para localizar','error'); return; }
+  var query = endereco + (cidade ? ', '+cidade : '') + ', São Paulo, Brasil';
+  var statusEl = document.getElementById('geocodeStatus');
+  statusEl.style.color = 'var(--muted)';
+  statusEl.textContent = '⏳ Buscando coordenadas...';
+
+  var url = 'https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(query)+'&format=json&limit=1&countrycodes=br';
+  fetch(url, { headers:{ 'Accept-Language':'pt-BR,pt', 'User-Agent':'MS-Seguranca-Routes-App' } })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(!data.length){
+        statusEl.style.color='var(--red)';
+        statusEl.textContent='❌ Endereço não encontrado. Tente um endereço mais específico ou insira as coordenadas manualmente.';
+        return;
+      }
+      var lat = parseFloat(data[0].lat);
+      var lng = parseFloat(data[0].lon);
+      document.getElementById('pLat').value = lat.toFixed(6);
+      document.getElementById('pLng').value = lng.toFixed(6);
+      statusEl.style.color='var(--green)';
+      statusEl.textContent='✅ Localizado: '+data[0].display_name.split(',').slice(0,3).join(', ');
+      var prev = document.getElementById('coordsPreview');
+      prev.textContent = 'Lat: '+lat.toFixed(6)+' · Lng: '+lng.toFixed(6);
+      prev.style.display = 'block';
+
+      // Preview no mapa se estiver aberto
+      if(window.map && window._mapLoaded) {
+        map.setCenter({ lat:lat, lng:lng });
+        map.setZoom(16);
+        if(window._previewMarker) window._previewMarker.setMap(null);
+        window._previewMarker = new google.maps.Marker({
+          position:{ lat:lat, lng:lng }, map:map,
+          title:'Posição do novo posto',
+          icon:{ path:google.maps.SymbolPath.CIRCLE, scale:12, fillColor:'#f59e0b', fillOpacity:1, strokeColor:'#fff', strokeWeight:2 },
+          animation: google.maps.Animation.BOUNCE
+        });
+        setTimeout(function(){ if(window._previewMarker) window._previewMarker.setAnimation(null); }, 2000);
+      }
+    })
+    .catch(function(){
+      statusEl.style.color='var(--red)';
+      statusEl.textContent='❌ Erro de conexão. Insira as coordenadas manualmente.';
+    });
+}
+
+// ================================================================
+// ALGORITMOS DE ROTA
+// ================================================================
+function haversineKm(lat1,lng1,lat2,lng2) {
+  var R = 6371;
+  var dLat = (lat2-lat1)*Math.PI/180;
+  var dLng = (lng2-lng1)*Math.PI/180;
+  var a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function distanciaTotal(postos) {
+  var total = 0;
+  for(var i=0;i<postos.length-1;i++){
+    total += haversineKm(postos[i].lat,postos[i].lng,postos[i+1].lat,postos[i+1].lng);
+  }
+  return total;
+}
+
+function nearestNeighborAlgo(postos) {
+  if(!postos || postos.length < 2) return postos || [];
+  var remaining = postos.slice();
+  var result = [remaining.splice(0,1)[0]];
+  while(remaining.length){
+    var last = result[result.length-1];
+    var minD = Infinity, minI = 0;
+    remaining.forEach(function(p,i){
+      var d = haversineKm(last.lat,last.lng,p.lat,p.lng);
+      if(d<minD){ minD=d; minI=i; }
+    });
+    result.push(remaining.splice(minI,1)[0]);
+  }
+  return result;
+}
+
+function splitInDays(postos, postosPorDia) {
+  var days = [];
+  for(var i=0;i<postos.length;i+=postosPorDia){
+    days.push(postos.slice(i,i+postosPorDia));
+  }
+  return days;
+}
+
+// ================================================================
+// IA DE ROTAS
+// ================================================================
+function calcularInteligencia() {
+  var horas = parseFloat(document.getElementById('cfgHoras').value)||8;
+  var tempoPosto = parseInt(document.getElementById('cfgTempoPosto').value)||30;
+  var tempoDeslocamento = parseInt(document.getElementById('cfgTempoDeslocamento').value)||15;
+  var velocidade = parseInt(document.getElementById('cfgVelocidade').value)||50;
+  var apiKey = document.getElementById('cfgApiKey').value.trim();
+
+  var minsDia = horas * 60;
+  var tempoUnitario = tempoPosto + tempoDeslocamento;
+  var postosPorDia = Math.max(1, Math.floor(minsDia / tempoUnitario));
+
+  // Salvar API key
+  if(apiKey) localStorage.setItem('ms_anthropic_key', apiKey);
+
+  var html = '';
+
+  ROTAS.forEach(function(rota){
+    var postosRota = rota.postos.map(function(pid){ return getPostoById(pid); }).filter(Boolean);
+    if(!postosRota.length) return;
+
+    var ordenados = nearestNeighborAlgo(postosRota);
+    var distTotal = distanciaTotal(ordenados);
+    var tempoEstimadoH = ((ordenados.length * tempoPosto) + (distTotal / velocidade * 60)) / 60;
+    var diasNecessarios = Math.ceil(ordenados.length / postosPorDia);
+    var diasDisponiveis = rota.dias.length;
+    var kmPorDia = (distTotal / diasNecessarios).toFixed(1);
+
+    html += '<div class="ia-rota-card">' +
+      '<div class="ia-rota-header">' +
+        '<div class="ia-rota-num" style="background:'+rota.cor+'">R'+rota.id+'</div>' +
+        '<div class="ia-rota-info"><h3>'+rota.nome+'</h3><p>'+rota.descricao+'</p></div>' +
+        '<div class="ia-stats">' +
+          '<div class="ia-stat"><div class="val" style="color:'+rota.cor+'">'+postosPorDia+'</div><div class="lbl">postos/dia</div></div>' +
+          '<div class="ia-stat"><div class="val" style="color:'+rota.cor+'">'+distTotal.toFixed(1)+' km</div><div class="lbl">distância total</div></div>' +
+          '<div class="ia-stat"><div class="val" style="color:'+(diasNecessarios>diasDisponiveis?'var(--red)':'var(--green)')+'">'+diasNecessarios+'/'+diasDisponiveis+'</div><div class="lbl">dias necessários/disponíveis</div></div>' +
+        '</div>' +
+      '</div>';
+
+    // Ordem otimizada
+    html += '<div class="ia-route-order"><h4>Ordem Otimizada (Nearest Neighbor)</h4><div class="ia-order-list">';
+    ordenados.forEach(function(p,i){
+      html += '<div class="ia-order-chip"><span class="num">'+String(i+1).padStart(2,'0')+'</span><span>'+p.nome.split(' ')[0]+' '+( p.nome.split(' ')[1]||'')+'</span></div>';
+      if(i<ordenados.length-1) html+='<div class="ia-arrow">→</div>';
+    });
+    html += '</div></div>';
+
+    // Distribuição por dia
+    var dias = splitInDays(ordenados, postosPorDia);
+    html += '<div class="ia-days-grid">';
+    dias.forEach(function(diaPostos, di){
+      var diaNome = rota.dias[di] || ('Dia '+(di+1));
+      var km = (distanciaTotal(diaPostos)).toFixed(1);
+      html += '<div class="ia-day-card">' +
+        '<div class="ia-day-header" style="background:'+rota.corBg+';color:'+rota.cor+'">'+diaNome+'</div>' +
+        '<div class="ia-day-body">';
+      diaPostos.forEach(function(p,i){
+        html += '<div class="ia-day-posto"><span style="color:var(--muted);font-size:10px;font-weight:700;min-width:16px">'+(i+1)+'.</span><span>'+p.nome+'</span></div>';
+      });
+      html += '</div><div class="ia-day-km">📏 ~'+km+' km neste dia</div></div>';
+    });
+
+    if(diasNecessarios > diasDisponiveis) {
+      html += '<div class="ia-day-card" style="border-color:var(--red)">' +
+        '<div class="ia-day-header" style="background:rgba(239,68,68,0.15);color:var(--red)">⚠️ Atenção</div>' +
+        '<div class="ia-day-body"><div style="font-size:12px;line-height:1.6;color:var(--muted)">Com '+tempoPosto+'min/posto e '+tempoDeslocamento+'min de deslocamento, são necessários <strong style="color:var(--red)">'+diasNecessarios+' dias</strong> mas a rota tem <strong>'+diasDisponiveis+' dias</strong> disponíveis. Considere reduzir o tempo por posto ou aumentar as horas de trabalho.</div></div>' +
+      '</div>';
+    }
+
+    html += '</div></div>';
+  });
+
+  // Sumário geral
+  var totalPostos = POSTOS.length;
+  var totalDistancia = 0;
+  ROTAS.forEach(function(r){
+    var ps = r.postos.map(function(pid){ return getPostoById(pid); }).filter(Boolean);
+    totalDistancia += distanciaTotal(nearestNeighborAlgo(ps));
+  });
+  html = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:20px;display:flex;gap:24px;flex-wrap:wrap">' +
+    '<div class="ia-stat"><div class="val" style="font-size:28px;color:var(--accent)">'+totalPostos+'</div><div class="lbl">Total de Postos</div></div>' +
+    '<div class="ia-stat"><div class="val" style="font-size:28px;color:var(--accent2)">'+totalDistancia.toFixed(0)+' km</div><div class="lbl">Distância Total</div></div>' +
+    '<div class="ia-stat"><div class="val" style="font-size:28px;color:var(--green)">'+postosPorDia+'</div><div class="lbl">Postos por Dia</div></div>' +
+    '<div class="ia-stat"><div class="val" style="font-size:28px;color:var(--purple)">'+horas+'h</div><div class="lbl">Jornada Diária</div></div>' +
+  '</div>' + html;
+
+  document.getElementById('iaResultados').innerHTML = html;
+
+  // Análise com Claude se tiver API key
+  if(apiKey) {
+    analisarComClaude(apiKey, postosPorDia, horas, tempoPosto, totalDistancia.toFixed(0));
+  }
+}
+
+async function analisarComClaude(apiKey, postosPorDia, horas, tempoPosto, distTotal) {
+  var iaDiv = document.getElementById('iaResultados');
+  var loadDiv = document.createElement('div');
+  loadDiv.className = 'ia-ai-analysis';
+  loadDiv.innerHTML = '<div class="ia-ai-header"><span style="font-size:20px">🤖</span><h3>Análise Claude AI</h3></div><div class="ia-loading"><div class="spinner"></div><span>Claude está analisando as rotas...</span></div>';
+  iaDiv.appendChild(loadDiv);
+
+  var rotasInfo = ROTAS.map(function(r){
+    var ps = r.postos.map(function(pid){ return getPostoById(pid); }).filter(Boolean);
+    var ord = nearestNeighborAlgo(ps);
+    return {
+      nome: r.nome,
+      dias: r.dias,
+      totalPostos: ps.length,
+      distancia: distanciaTotal(ord).toFixed(1),
+      postos: ord.map(function(p){ return p.nome+' ('+p.cidade+', '+p.tipo+')'; })
+    };
+  });
+
+  var prompt = 'Você é um especialista em logística e supervisão de segurança patrimonial. Analise as seguintes rotas de supervisão do Grupo M.S Segurança e forneça recomendações práticas em português.\n\n' +
+    'PARÂMETROS:\n- Jornada: '+horas+'h/dia\n- Tempo médio por posto: '+tempoPosto+' minutos\n- Postos possíveis por dia: '+postosPorDia+'\n- Distância total de todas as rotas: '+distTotal+' km\n\n' +
+    'ROTAS:\n'+JSON.stringify(rotasInfo, null, 2)+'\n\n' +
+    'TOTAL DE POSTOS: '+POSTOS.length+'\n\n' +
+    'Por favor, forneça:\n1. Avaliação geral da distribuição de postos por rota\n2. Sugestões para otimizar a sequência de visitas considerando tipos (Residencial/Comercial/Industrial) e prioridades de segurança\n3. Recomendação de dias da semana ideais para cada tipo de posto\n4. Possíveis riscos ou pontos de atenção no planejamento atual\n5. Dicas práticas para o supervisor em campo\n\nSeja objetivo e direto, máximo 400 palavras.';
+
+  try {
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{ role:'user', content:prompt }]
+      })
+    });
+
+    if(!response.ok) {
+      var err = await response.json();
+      loadDiv.querySelector('.ia-loading').innerHTML = '<span style="color:var(--red)">❌ Erro da API: '+(err.error?.message||'Verifique sua chave Anthropic.')+'</span>';
+      return;
+    }
+
+    var data = await response.json();
+    var text = data.content.map(function(c){ return c.text||''; }).join('');
+    loadDiv.innerHTML = '<div class="ia-ai-header"><span style="font-size:20px">🤖</span><h3>Análise Claude AI</h3><span style="font-size:11px;color:var(--muted);margin-left:auto">claude-sonnet-4</span></div><div class="ia-ai-content">'+text+'</div>';
+  } catch(e) {
+    loadDiv.querySelector('.ia-loading').innerHTML = '<span style="color:var(--red)">❌ Erro de conexão: '+e.message+'</span>';
+  }
+}
+
+function toggleApiKeyVis() {
+  var inp = document.getElementById('cfgApiKey');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+// ================================================================
+// CHECKLIST
+// ================================================================
+function renderPostoSelect() {
+  var sel = document.getElementById('postosSelect');
+  var val = sel.value;
+  sel.innerHTML = '<option value="">— Selecione o posto —</option>';
+  POSTOS.forEach(function(p){
+    sel.innerHTML += '<option value="'+p.id+'">'+p.nome+' — '+p.cidade+'</option>';
+  });
+  if(val) sel.value = val;
+}
+
+var CHECKLIST_ITEMS = {
+  "Portaria e Acesso": ["Portaria está guarnecida","Colaborador uniformizado e identificado","Livro de ocorrências atualizado","Acesso controlado e barreira funcionando","Câmeras de segurança operacionais","Iluminação da entrada adequada"],
+  "Ronda e Perímetro": ["Ronda realizada conforme escala","Pontos cegos identificados","Portões e cancelas sem avarias","Cercas e muros sem danos","Áreas de risco sinalizadas"],
+  "Documentação e EPI": ["Escala de serviço afixada","Colaborador com EPI completo","Rádio / comunicação funcionando","Lanterna e bastão presentes","Documentos do posto em dia"],
+  "Conduta e Postura": ["Colaborador atencioso e cordial","Sem uso de celular em serviço","Sem presença de terceiros na guarita","Sem sinais de sono/fadiga aparente"]
+};
+
+function renderChecklist() {
+  var postoId = parseInt(document.getElementById('postosSelect').value);
+  var area = document.getElementById('checklistArea');
+  if(!postoId){ area.innerHTML=''; return; }
+  var posto = getPostoById(postoId);
+  var rota = ROTAS.find(function(r){ return r.id === posto.rota; });
+  var cor = rota ? rota.cor : '#64748b';
+  var now = new Date();
+
+  var html = '<div class="checklist-card">';
+  html += '<div class="checklist-card-header">'+
+    '<div class="posto-badge" style="background:'+cor+';width:40px;height:40px;font-size:16px">'+posto.id+'</div>'+
+    '<div><h2>'+posto.nome+'</h2><p>'+posto.cidade+' · '+(rota?rota.nome:'—')+' · '+posto.tipo+'</p></div>'+
+  '</div>';
+  html += '<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>';
+  html += '<div class="checklist-meta">'+
+    '<div class="meta-field"><label>Supervisor</label><input type="text" id="supervInput" placeholder="Seu nome" value="Paulo Roberto Jardim"></div>'+
+    '<div class="meta-field"><label>Data / Hora</label><input type="datetime-local" id="dataInput" value="'+now.toISOString().slice(0,16)+'"></div>'+
+    '<div class="meta-field"><label>Colaborador no Posto</label><input type="text" id="colabInput" placeholder="Nome do colaborador"></div>'+
+    '<div class="meta-field"><label>Turno</label><select id="turnoInput" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:Barlow,sans-serif;font-size:13px;width:100%"><option>Diurno (06h-18h)</option><option>Noturno (18h-06h)</option><option>Misto</option></select></div>'+
+  '</div>';
+
+  var allChecks = [];
+  var ci = 0;
+  Object.keys(CHECKLIST_ITEMS).forEach(function(secao){
+    html += '<div class="checklist-section"><h4>◆ '+secao+'</h4>';
+    CHECKLIST_ITEMS[secao].forEach(function(item){
+      var cid = 'chk_'+ci++;
+      allChecks.push(cid);
+      html += '<div class="check-item">'+
+        '<input type="checkbox" id="'+cid+'" onchange="updateProgress('+JSON.stringify(allChecks)+')">'+
+        '<label for="'+cid+'">'+item+'</label>'+
+        '<select style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:3px 6px;border-radius:4px;font-size:11px;font-family:Barlow,sans-serif">'+
+        '<option value="ok">✅ OK</option><option value="nok">❌ Não OK</option><option value="na">— N/A</option>'+
+        '</select>'+
+      '</div>';
+    });
+    html += '</div>';
+  });
+
+  html += '<div class="obs-area"><label>Observações / Ocorrências</label><textarea id="obsInput" placeholder="Registre aqui qualquer ocorrência..."></textarea></div>';
+  html += '<div class="checklist-footer">'+
+    '<button class="btn btn-success" onclick="salvarChecklist('+postoId+')">💾 Salvar Visita</button>'+
+    '<button class="btn btn-secondary" onclick="imprimirChecklist()">🖨️ Imprimir</button>'+
+    '<button class="btn btn-secondary" onclick="limparChecklist()">🔄 Limpar</button>'+
+  '</div></div>';
+
+  area.innerHTML = html;
+}
+
+function updateProgress(ids) {
+  var checked = ids.filter(function(id){ var el=document.getElementById(id); return el&&el.checked; }).length;
+  var fill = document.getElementById('progressFill');
+  if(fill) fill.style.width = Math.round((checked/ids.length)*100)+'%';
+}
+
+function salvarChecklist(postoId) {
+  var posto = getPostoById(postoId);
+  var total=0, checked=0, noks=[];
+  document.querySelectorAll('.check-item').forEach(function(row){
+    var cb=row.querySelector('input[type=checkbox]'), sel=row.querySelector('select'), lbl=row.querySelector('label');
+    total++;
+    if(cb&&cb.checked) checked++;
+    if(sel&&sel.value==='nok'&&lbl) noks.push(lbl.textContent);
+  });
+  var visita = {
+    id:Date.now(), postoId:postoId, postoNome:posto.nome, cidade:posto.cidade,
+    supervisor:document.getElementById('supervInput')?.value||'',
+    data:document.getElementById('dataInput')?.value||'',
+    colaborador:document.getElementById('colabInput')?.value||'',
+    turno:document.getElementById('turnoInput')?.value||'',
+    obs:document.getElementById('obsInput')?.value||'',
+    total:total, checked:checked, noks:noks, pct:Math.round((checked/total)*100)
+  };
+  var historico = JSON.parse(localStorage.getItem('ms_visitas')||'[]');
+  historico.unshift(visita);
+  localStorage.setItem('ms_visitas', JSON.stringify(historico));
+  showToast('✅ Visita ao '+posto.nome+' registrada!');
+}
+
+function limparChecklist() {
+  document.querySelectorAll('.check-item input[type=checkbox]').forEach(function(cb){ cb.checked=false; });
+  var obs=document.getElementById('obsInput'); if(obs) obs.value='';
+  var fill=document.getElementById('progressFill'); if(fill) fill.style.width='0%';
+}
+
+function imprimirChecklist() { window.print(); }
+
+// ================================================================
+// HISTÓRICO
+// ================================================================
+function renderHistorico() {
+  var historico = JSON.parse(localStorage.getItem('ms_visitas')||'[]');
+  var el = document.getElementById('historicoContent');
+  if(!historico.length){
+    el.innerHTML='<div class="empty-state"><div class="icon">📋</div><p>Nenhuma visita registrada ainda.<br>Faça um checklist para ver o histórico aqui.</p></div>';
+    return;
+  }
+  var html='<table><thead><tr><th>Data/Hora</th><th>Posto</th><th>Cidade</th><th>Supervisor</th><th>Colaborador</th><th>Turno</th><th>Progresso</th><th>Status</th></tr></thead><tbody>';
+  historico.forEach(function(v){
+    var dt=v.data?new Date(v.data).toLocaleString('pt-BR'):'—';
+    var status=v.pct>=90?'<span class="badge badge-ok">Completo</span>':'<span class="badge badge-pend">Pendente</span>';
+    html+='<tr><td>'+dt+'</td><td><strong>'+v.postoNome+'</strong></td><td>'+v.cidade+'</td><td>'+v.supervisor+'</td><td>'+v.colaborador+'</td><td>'+v.turno+'</td>' +
+      '<td><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;background:var(--accent);width:'+v.pct+'%"></div></div><span style="font-size:11px;color:var(--muted)">'+v.pct+'%</span></div></td>' +
+      '<td>'+status+'</td></tr>';
+  });
+  html+='</tbody></table>';
+  el.innerHTML=html;
+}
+
+function limparHistorico() {
+  if(confirm('Deseja apagar todo o histórico de visitas?')){
+    localStorage.removeItem('ms_visitas');
+    renderHistorico();
+    showToast('Histórico limpo.');
+  }
+}
+
+// ================================================================
+// TABS
+// ================================================================
+function showTab(tab, el) {
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
+  if(el) el.classList.add('active');
+  document.getElementById('panel-'+tab).classList.add('active');
+  if(tab==='mapa' && !window._mapLoaded){ window._mapLoaded=true; setTimeout(initMap,100); }
+  if(tab==='historico') renderHistorico();
+}
+
+function showTabByName(tab) {
+  var tabs = document.querySelectorAll('.tab');
+  var map = { 'mapa':0,'rotas':1,'postos':2,'ia':3,'checklist':4,'historico':5 };
+  var idx = map[tab];
+  if(idx !== undefined && tabs[idx]) showTab(tab, tabs[idx]);
+}
+
+// ================================================================
+// RERENDER ALL (após mudanças em postos)
+// ================================================================
+function reRenderAll() {
+  renderSidebar();
+  renderRotas();
+  renderPostoSelect();
+  renderPostosList();
+  renderRotasLegenda();
+  if(map) {
+    renderMarkers();
+    if(polylinesVisible) renderPolylines();
+  }
+}
+
+// ================================================================
+// TOAST
+// ================================================================
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast'+(type==='error'?' error':'');
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 3200);
+}
+
+// ================================================================
+// HEADER DATE
+// ================================================================
+function atualizarData() {
+  var d = new Date();
+  var dias = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  document.getElementById('headerDate').textContent = dias[d.getDay()]+', '+d.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+}
+
+// ================================================================
+// INIT
+// ================================================================
+document.addEventListener('DOMContentLoaded', function(){
+  loadCustomPostos();
+  buildPostos();
+
+  atualizarData();
+  renderSidebar();
+  renderRotas();
+  renderRotasSelect();
+  renderRotasLegenda();
+  renderPostoSelect();
+  renderPostosList();
+  renderHistorico();
+
+  // Carregar API key salva
+  var savedKey = localStorage.getItem('ms_anthropic_key');
+  if(savedKey) document.getElementById('cfgApiKey').value = savedKey;
+
+  // Modal fecha com clique fora
+  document.getElementById('rotaModal').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
+});
+</script>
+
+<!-- Google Maps API -->
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD-placeholder&callback=initMapOnLoad" async defer onerror="mapError()"></script>
+<script>
+function initMapOnLoad(){
+  if(document.getElementById('panel-mapa').classList.contains('active')){
+    window._mapLoaded=true;
+    initMap();
+  }
+}
+function mapError(){
+  document.getElementById('map').innerHTML=
+    '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted);gap:12px">'+
+    '<div style="font-size:48px">🗺️</div>'+
+    '<p style="font-size:14px;text-align:center">Para o mapa interativo, adicione sua chave da Google Maps API.<br><br>'+
+    '<a href="https://developers.google.com/maps/documentation/javascript/get-api-key" target="_blank" style="color:var(--accent)">Como obter uma chave gratuita →</a></p>'+
+    '<p style="font-size:12px;text-align:center;margin-top:4px">Substitua <code style="background:var(--surface2);padding:2px 6px;border-radius:3px">AIzaSyD-placeholder</code> pela sua chave.</p>'+
+    '<p style="font-size:11px;color:var(--muted);margin-top:4px">A geocodificação de endereços (aba Gestão de Postos) funciona sem a chave.</p>'+
+    '</div>';
+}
+</script>
+</body>
+</html>
