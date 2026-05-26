@@ -829,16 +829,25 @@ function abrirRotaMaps(rotaId) {
 }
 
 function abrirGoogleMaps() {
-  if(!currentRotaPostos.length) return;
+  if(!currentRotaPostos || !currentRotaPostos.length) return;
   var origem = currentRotaPostos[0];
   var destino = currentRotaPostos[currentRotaPostos.length-1];
-  var waypoints = currentRotaPostos.slice(1,-1).map(function(p){ return p.lat+','+p.lng; }).join('|');
+  // Google Maps aceita até 8 waypoints na URL pública
+  var middle = currentRotaPostos.slice(1,-1).slice(0,8);
+  var waypoints = middle.map(function(p){ return p.lat+','+p.lng; }).join('|');
   var url = 'https://www.google.com/maps/dir/?api=1' +
     '&origin='+origem.lat+','+origem.lng +
     '&destination='+destino.lat+','+destino.lng +
-    (waypoints?'&waypoints='+encodeURIComponent(waypoints):'') +
+    (waypoints ? '&waypoints='+encodeURIComponent(waypoints) : '') +
     '&travelmode=driving';
-  window.open(url,'_blank');
+  // Usar <a> para evitar bloqueio de popup
+  var a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 function iniciarRota(rotaId) {
@@ -1097,54 +1106,189 @@ function renderBotoesRota(acoes, rotaId) {
 }
 
 // ================================================================
-// GEOCODIFICAÇÃO (OpenStreetMap Nominatim - sem chave)
+// GEOCODIFICAÇÃO + ROTEAMENTO INTELIGENTE POR GEOLOCALIZAÇÃO
 // ================================================================
+
+// Limiar máximo (km) para encaixar em rota existente vs criar nova
+var GEO_LIMIAR_KM = 15;
+
 function geocodificar() {
   var endereco = document.getElementById('pEndereco').value.trim();
-  var cidade = document.getElementById('pCidade').value.trim();
+  var cidade   = document.getElementById('pCidade').value.trim();
   if(!endereco && !cidade){ showToast('⚠️ Preencha o endereço ou a cidade para localizar','error'); return; }
-  var query = endereco + (cidade ? ', '+cidade : '') + ', São Paulo, Brasil';
+
+  var query = (endereco||'') + (cidade ? ', '+cidade : '') + ', São Paulo, Brasil';
   var statusEl = document.getElementById('geocodeStatus');
   statusEl.style.color = 'var(--muted)';
   statusEl.textContent = '⏳ Buscando coordenadas...';
+  document.getElementById('coordsPreview').style.display = 'none';
 
-  var url = 'https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(query)+'&format=json&limit=1&countrycodes=br';
+  var url = 'https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(query)+'&format=json&limit=3&countrycodes=br';
   fetch(url, { headers:{ 'Accept-Language':'pt-BR,pt', 'User-Agent':'MS-Seguranca-Routes-App' } })
     .then(function(r){ return r.json(); })
     .then(function(data){
-      if(!data.length){
+      if(!data || !data.length){
         statusEl.style.color='var(--red)';
-        statusEl.textContent='❌ Endereço não encontrado. Tente um endereço mais específico ou insira as coordenadas manualmente.';
+        statusEl.textContent='❌ Endereço não encontrado. Tente mais específico ou insira as coordenadas manualmente.';
         return;
       }
       var lat = parseFloat(data[0].lat);
       var lng = parseFloat(data[0].lon);
+      var nomeLocal = data[0].display_name.split(',').slice(0,3).join(', ');
+
       document.getElementById('pLat').value = lat.toFixed(6);
       document.getElementById('pLng').value = lng.toFixed(6);
-      statusEl.style.color='var(--green)';
-      statusEl.textContent='✅ Localizado: '+data[0].display_name.split(',').slice(0,3).join(', ');
+      statusEl.style.color = 'var(--green)';
+      statusEl.textContent = '✅ Localizado: ' + nomeLocal;
+
       var prev = document.getElementById('coordsPreview');
       prev.textContent = 'Lat: '+lat.toFixed(6)+' · Lng: '+lng.toFixed(6);
       prev.style.display = 'block';
 
-      // Preview no mapa se estiver aberto
-      if(window.map && window._mapLoaded) {
+      // Roteamento inteligente por geolocalização
+      analisarRotaPorGeo(lat, lng, nomeLocal);
+
+      // Preview no mapa
+      if(window.map && window._mapLoaded && typeof google !== 'undefined') {
         map.setCenter({ lat:lat, lng:lng });
-        map.setZoom(16);
-        if(window._previewMarker) window._previewMarker.setMap(null);
+        map.setZoom(15);
+        if(window._previewMarker) try{ window._previewMarker.setMap(null); }catch(e){}
         window._previewMarker = new google.maps.Marker({
           position:{ lat:lat, lng:lng }, map:map,
-          title:'Posição do novo posto',
-          icon:{ path:google.maps.SymbolPath.CIRCLE, scale:12, fillColor:'#f59e0b', fillOpacity:1, strokeColor:'#fff', strokeWeight:2 },
+          title:'Novo posto — '+nomeLocal,
+          icon:{ path:google.maps.SymbolPath.CIRCLE, scale:13,
+                 fillColor:'#f59e0b', fillOpacity:1,
+                 strokeColor:'#fff', strokeWeight:2 },
           animation: google.maps.Animation.BOUNCE
         });
-        setTimeout(function(){ if(window._previewMarker) window._previewMarker.setAnimation(null); }, 2000);
+        setTimeout(function(){ if(window._previewMarker) try{ window._previewMarker.setAnimation(null); }catch(e){} }, 2500);
       }
     })
-    .catch(function(){
+    .catch(function(e){
       statusEl.style.color='var(--red)';
       statusEl.textContent='❌ Erro de conexão. Insira as coordenadas manualmente.';
     });
+}
+
+// ── Análise geográfica: encontra rota mais próxima e sugere encaixe ou nova rota ──
+function analisarRotaPorGeo(lat, lng, nomeLocal) {
+  // Para cada rota, calcula distância média ao centróide dos seus postos
+  var analises = ROTAS.map(function(rota) {
+    var postos = rota.postos.map(function(pid){ return getPostoById(pid); }).filter(Boolean);
+    if(!postos.length) return { rota:rota, distMedia:9999, distMin:9999, postoMaisProx:null };
+
+    // Centróide da rota
+    var centLat = postos.reduce(function(s,p){ return s+p.lat; },0) / postos.length;
+    var centLng = postos.reduce(function(s,p){ return s+p.lng; },0) / postos.length;
+    var distCentro = haversineKm(lat, lng, centLat, centLng);
+
+    // Posto mais próximo
+    var distMin = Infinity, postoMaisProx = null;
+    postos.forEach(function(p){
+      var d = haversineKm(lat, lng, p.lat, p.lng);
+      if(d < distMin){ distMin = d; postoMaisProx = p; }
+    });
+
+    return { rota:rota, distCentro:distCentro, distMin:distMin, postoMaisProx:postoMaisProx };
+  });
+
+  // Ordena pela distância ao centróide
+  analises.sort(function(a,b){ return a.distCentro - b.distCentro; });
+  var melhor = analises[0];
+
+  // Monta painel de sugestão geo
+  var box = document.getElementById('iaSugestaoBox');
+  var contentEl = document.getElementById('iaSugestaoContent');
+  var acoes = document.getElementById('iaSugestaoAcoes');
+  box.style.display = 'block';
+  acoes.innerHTML = '';
+
+  if(melhor.distMin <= GEO_LIMIAR_KM) {
+    // ── CASO 1: Encaixar em rota existente ──
+    var r = melhor.rota;
+    var icone = melhor.distMin < 3 ? '📍' : melhor.distMin < 8 ? '🔵' : '🟡';
+    contentEl.innerHTML =
+      '<strong style="color:#10b981">'+icone+' Rota identificada por geolocalização:</strong> '+
+      '<span style="color:'+r.cor+';font-weight:700">'+r.nome+'</span> — '+
+      'O endereço fica a <strong>'+melhor.distMin.toFixed(1)+' km</strong> do posto mais próximo '+
+      '(<em>'+melhor.postoMaisProx.nome+'</em>), dentro do raio de cobertura desta rota.';
+
+    // Botão "Usar esta rota"
+    var btnUsar = document.createElement('button');
+    btnUsar.style.cssText = 'padding:6px 16px;border-radius:6px;border:2px solid '+r.cor+';background:'+r.cor+'22;color:'+r.cor+';font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:700;cursor:pointer';
+    btnUsar.textContent = '✓ Usar '+r.nome;
+    btnUsar.onclick = function(){
+      document.getElementById('pRota').value = r.id;
+      showToast('✅ '+r.nome+' selecionada!');
+    };
+    acoes.appendChild(btnUsar);
+
+    // Botões alternativos
+    analises.slice(1).forEach(function(a){
+      var btnAlt = document.createElement('button');
+      btnAlt.style.cssText = 'padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--muted);font-family:Barlow Condensed,sans-serif;font-size:12px;cursor:pointer';
+      btnAlt.textContent = a.rota.nome+' ('+a.distMin.toFixed(1)+'km)';
+      btnAlt.onclick = function(){
+        document.getElementById('pRota').value = a.rota.id;
+        showToast(a.rota.nome+' selecionada!');
+      };
+      acoes.appendChild(btnAlt);
+    });
+
+    // Auto-seleciona a rota sugerida
+    document.getElementById('pRota').value = r.id;
+
+  } else {
+    // ── CASO 2: Endereço fora de todas as rotas → Sugerir nova rota ──
+    contentEl.innerHTML =
+      '<strong style="color:#f59e0b">⚠️ Endereço fora das rotas atuais:</strong> '+
+      'O ponto mais próximo fica a <strong>'+melhor.distMin.toFixed(1)+' km</strong> da '+melhor.rota.nome+
+      '. Recomenda-se <strong>criar uma nova rota</strong> ou revisar os limites geográficos.';
+
+    // Botão criar nova rota
+    var btnNova = document.createElement('button');
+    btnNova.style.cssText = 'padding:6px 16px;border-radius:6px;border:2px solid #f59e0b;background:rgba(245,158,11,0.12);color:#f59e0b;font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:700;cursor:pointer';
+    btnNova.textContent = '⊕ Criar Nova Rota para este Posto';
+    btnNova.onclick = function(){
+      var nomeNovaRota = 'Rota Delta';
+      var novaId = ROTAS.reduce(function(mx,r){ return r.id>mx?r.id:mx; },0) + 1;
+      var cores = ['#ec4899','#06b6d4','#a855f7','#f97316','#84cc16'];
+      var cor = cores[(novaId-1) % cores.length];
+      var novaRota = {
+        id: novaId,
+        nome: nomeNovaRota,
+        cor: cor,
+        corBg: 'rgba(100,116,139,0.15)',
+        dias: ['Segunda-feira','Quinta-feira'],
+        postos: [],
+        descricao: 'Nova rota criada automaticamente por geolocalização'
+      };
+      ROTAS.push(novaRota);
+      renderRotasSelect();
+      renderRotasLegenda();
+      document.getElementById('pRota').value = novaId;
+      showToast('✅ Nova rota "'+nomeNovaRota+'" criada! Defina os dias após salvar o posto.');
+      contentEl.innerHTML = '<strong style="color:#10b981">✅ Nova rota "'+nomeNovaRota+'" criada e selecionada.</strong> Salve o posto e ajuste os dias de operação na aba Rotas Semanais.';
+      acoes.innerHTML = '';
+    };
+    acoes.appendChild(btnNova);
+
+    // Também oferece encaixe na mais próxima mesmo assim
+    var btnForca = document.createElement('button');
+    btnForca.style.cssText = 'padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--muted);font-family:Barlow Condensed,sans-serif;font-size:12px;cursor:pointer';
+    btnForca.textContent = 'Usar '+melhor.rota.nome+' mesmo assim';
+    btnForca.onclick = function(){
+      document.getElementById('pRota').value = melhor.rota.id;
+      showToast(melhor.rota.nome+' selecionada manualmente.');
+    };
+    acoes.appendChild(btnForca);
+
+    // Mostra ranking completo
+    var ranking = '<div style="margin-top:8px;font-size:11px;color:var(--muted)">Distâncias ao centróide de cada rota: ';
+    ranking += analises.map(function(a){ return '<span style="color:'+a.rota.cor+';font-weight:600">'+a.rota.nome+'</span> '+a.distCentro.toFixed(1)+'km'; }).join(' · ');
+    ranking += '</div>';
+    contentEl.innerHTML += ranking;
+  }
 }
 
 // ================================================================
