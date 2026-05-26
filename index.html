@@ -347,17 +347,17 @@
           <div class="form-body">
             <input type="hidden" id="editingPostoId" value="">
             <div class="form-group">
-              <label>Nome do Posto <span class="req">*</span></label>
-              <input class="form-input" id="pNome" placeholder="Ex: Residencial Jardim Europa" />
+              <label>Nome do Condomínio / Empresa <span class="req">*</span></label>
+              <input class="form-input" id="pNome" placeholder="Ex: Residencial Jardim Europa" oninput="agendarSugestaoIA()" />
             </div>
             <div class="form-grid-2">
               <div class="form-group">
                 <label>Cidade <span class="req">*</span></label>
-                <input class="form-input" id="pCidade" placeholder="Ex: Mogi Guaçu" />
+                <input class="form-input" id="pCidade" placeholder="Ex: Mogi Guaçu" oninput="agendarSugestaoIA()" />
               </div>
               <div class="form-group">
                 <label>Tipo <span class="req">*</span></label>
-                <select class="form-select" id="pTipo">
+                <select class="form-select" id="pTipo" onchange="agendarSugestaoIA()">
                   <option value="">— Selecione —</option>
                   <option value="Residencial">Residencial</option>
                   <option value="Comercial">Comercial</option>
@@ -366,6 +366,18 @@
                 </select>
               </div>
             </div>
+
+            <!-- IA: Sugestão automática de rota -->
+            <div id="iaSugestaoBox" style="display:none;background:linear-gradient(135deg,rgba(139,92,246,0.12),rgba(59,130,246,0.08));border:1px solid rgba(139,92,246,0.4);border-radius:8px;padding:12px 14px;margin-bottom:14px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                <span style="font-size:15px">🤖</span>
+                <span style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:0.5px">Sugestão Inteligente de Rota</span>
+                <div id="iaSugestaoSpinner" style="display:none;width:14px;height:14px;border:2px solid rgba(139,92,246,0.3);border-top-color:#8b5cf6;border-radius:50%;animation:spin 0.8s linear infinite"></div>
+              </div>
+              <div id="iaSugestaoContent" style="font-size:13px;line-height:1.6;color:var(--text)"></div>
+              <div id="iaSugestaoAcoes" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"></div>
+            </div>
+
             <div class="form-group">
               <label>Rota <span class="req">*</span></label>
               <select class="form-select" id="pRota">
@@ -375,7 +387,7 @@
             <div class="form-group">
               <label>Endereço para Localização</label>
               <div class="geocode-row">
-                <input class="form-input" id="pEndereco" placeholder="Endereço completo para geocodificar..." />
+                <input class="form-input" id="pEndereco" placeholder="Endereço completo para geocodificar..." oninput="agendarSugestaoIA()" />
                 <button class="btn-geocode" onclick="geocodificar()">📍 Localizar</button>
               </div>
               <div class="geocode-status" id="geocodeStatus"></div>
@@ -598,6 +610,8 @@ var map, markers = [], infoWindow, polylines = [], polylinesVisible = false, cur
 var currentRotaPostos = [];
 
 function initMap() {
+  try {
+  if(typeof google === 'undefined' || !google.maps){ mapError(); return; }
   map = new google.maps.Map(document.getElementById('map'), {
     center: { lat:-22.38, lng:-46.96 }, zoom:12,
     styles:[
@@ -611,10 +625,12 @@ function initMap() {
   });
   infoWindow = new google.maps.InfoWindow();
   renderMarkers();
+  } catch(e){ mapError(); }
 }
 
 function renderMarkers() {
-  markers.forEach(function(m){ m.marker.setMap(null); });
+  if(typeof google === 'undefined' || !map) return;
+  markers.forEach(function(m){ try{ m.marker.setMap(null); }catch(e){} });
   markers = [];
   POSTOS.forEach(function(posto){
     var rota = ROTAS.find(function(r){ return r.id === posto.rota; });
@@ -651,7 +667,8 @@ function renderMarkers() {
 }
 
 function renderPolylines() {
-  polylines.forEach(function(pl){ pl.setMap(null); });
+  if(typeof google === 'undefined') return;
+  polylines.forEach(function(pl){ try{ pl.setMap(null); }catch(e){} });
   polylines = [];
   if(!map) return;
   ROTAS.forEach(function(rota){
@@ -826,7 +843,9 @@ function abrirGoogleMaps() {
 
 function iniciarRota(rotaId) {
   var rota = ROTAS.find(function(r){ return r.id === rotaId; });
+  if(!rota) return;
   currentRotaPostos = rota.postos.map(function(pid){ return getPostoById(pid); }).filter(Boolean);
+  if(!currentRotaPostos.length){ showToast('⚠️ Nenhum posto nesta rota','error'); return; }
   abrirGoogleMaps();
 }
 
@@ -958,6 +977,10 @@ function limparFormPosto() {
   document.getElementById('coordsPreview').style.display = 'none';
   document.getElementById('formCardTitle').textContent = 'Cadastrar Novo Posto';
   document.getElementById('btnCancelarEdicao').style.display = 'none';
+  // Resetar caixa de sugestão IA
+  var box = document.getElementById('iaSugestaoBox');
+  if(box) box.style.display = 'none';
+  clearTimeout(_iaSugestaoTimer);
 }
 
 function deletarPosto(id) {
@@ -970,6 +993,107 @@ function deletarPosto(id) {
   buildPostos();
   reRenderAll();
   showToast('🗑 Posto removido.');
+}
+
+// ================================================================
+// IA: SUGESTÃO AUTOMÁTICA DE ROTA
+// ================================================================
+var _iaSugestaoTimer = null;
+
+function agendarSugestaoIA() {
+  clearTimeout(_iaSugestaoTimer);
+  var nome = (document.getElementById('pNome').value || '').trim();
+  var cidade = (document.getElementById('pCidade').value || '').trim();
+  var endereco = (document.getElementById('pEndereco').value || '').trim();
+  var tipo = document.getElementById('pTipo').value;
+  if(nome.length < 4 && !endereco) return;
+  _iaSugestaoTimer = setTimeout(function(){ executarSugestaoIA(nome, cidade, tipo, endereco); }, 900);
+}
+
+async function executarSugestaoIA(nome, cidade, tipo, endereco) {
+  var box = document.getElementById('iaSugestaoBox');
+  var content = document.getElementById('iaSugestaoContent');
+  var acoes = document.getElementById('iaSugestaoAcoes');
+  var spinner = document.getElementById('iaSugestaoSpinner');
+  var apiKey = localStorage.getItem('ms_anthropic_key') || '';
+
+  box.style.display = 'block';
+  spinner.style.display = 'inline-block';
+  acoes.innerHTML = '';
+  content.innerHTML = '<span style="color:var(--muted)">Analisando...</span>';
+
+  // Heurística local (sem API key)
+  var rotaSugerida = sugerirRotaLocal(nome, cidade, tipo, endereco);
+
+  if(!apiKey) {
+    spinner.style.display = 'none';
+    content.innerHTML = '<strong style="color:#8b5cf6">Sugestão (análise local):</strong> ' + rotaSugerida.motivo;
+    renderBotoesRota(acoes, rotaSugerida.rotaId);
+    return;
+  }
+
+  // Análise com Claude se tiver API key
+  var rotasDesc = ROTAS.map(function(r){
+    var ps = r.postos.map(function(pid){ var p=getPostoById(pid); return p?p.nome+' ('+p.cidade+', '+p.tipo+')':''; }).filter(Boolean);
+    return 'Rota '+r.id+' — '+r.nome+': '+ps.join(', ')+' | Dias: '+r.dias.join(', ');
+  }).join('\n');
+
+  var linhasNovo = 'Nome: '+nome;
+  if(cidade) linhasNovo += '\nCidade: '+cidade;
+  if(tipo) linhasNovo += '\nTipo: '+tipo;
+  if(endereco) linhasNovo += '\nEndereço: '+endereco;
+
+  var prompt = 'Você é um sistema de sugestão de rotas para empresa de segurança patrimonial.\n\n'+
+    'Novo posto sendo cadastrado:\n'+linhasNovo+'\n\n'+
+    'Rotas existentes:\n'+rotasDesc+'\n\n'+
+    'Analise e responda SOMENTE com JSON neste formato exato (sem markdown, sem texto extra):\n'+
+    '{"rotaId":1,"motivo":"Explicação curta em até 2 frases de por que esta rota é ideal."}';
+
+  try {
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body: JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:200,messages:[{role:'user',content:prompt}]})
+    });
+    var data = await resp.json();
+    var text = (data.content||[]).map(function(c){return c.text||'';}).join('').replace(/```json|```/g,'').trim();
+    var parsed = JSON.parse(text);
+    spinner.style.display = 'none';
+    content.innerHTML = '<strong style="color:#8b5cf6">✨ Análise Claude:</strong> ' + (parsed.motivo||'Rota sugerida com base no perfil.');
+    renderBotoesRota(acoes, parsed.rotaId);
+  } catch(e) {
+    spinner.style.display = 'none';
+    content.innerHTML = '<strong style="color:#8b5cf6">Sugestão (análise local):</strong> ' + rotaSugerida.motivo;
+    renderBotoesRota(acoes, rotaSugerida.rotaId);
+  }
+}
+
+function sugerirRotaLocal(nome, cidade, tipo, endereco) {
+  var nomeLower = (nome+' '+endereco+' '+cidade).toLowerCase();
+  // Regra por cidade
+  if(cidade.toLowerCase().includes('mogi mirim')) return { rotaId:3, motivo:'Mogi Mirim faz parte da Rota Gamma, que cobre postos nessa cidade.' };
+  // Regra por tipo
+  if(tipo === 'Industrial' || nomeLower.match(/industri|logist|armazem|fabrica|empresa|ltda|sa|comercio/)) {
+    return { rotaId:2, motivo:'Postos industriais e comerciais são agrupados na Rota Beta, que opera terças e quintas.' };
+  }
+  if(tipo === 'Residencial' || tipo === 'Condomínio' || nomeLower.match(/residencial|condomin|portal|jardim|reserva|clube|vila|parque/)) {
+    return { rotaId:1, motivo:'Condomínios e residenciais de Mogi Guaçu integram a Rota Alpha, operando segunda, quarta e sexta.' };
+  }
+  // Fallback: rota com menos postos
+  var menorRota = ROTAS.reduce(function(min, r){ return r.postos.length < min.postos.length ? r : min; }, ROTAS[0]);
+  return { rotaId:menorRota.id, motivo:'Sugerida a '+menorRota.nome+' por ter o menor número de postos, balanceando a carga.' };
+}
+
+function renderBotoesRota(acoes, rotaId) {
+  acoes.innerHTML = '';
+  ROTAS.forEach(function(r){
+    var isSug = r.id === rotaId;
+    var btn = document.createElement('button');
+    btn.style.cssText = 'padding:5px 14px;border-radius:6px;border:1px solid '+(isSug?r.cor:'var(--border)')+';background:'+(isSug?r.cor+'22':'none')+';color:'+(isSug?r.cor:'var(--muted)')+';font-family:Barlow Condensed,sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s';
+    btn.innerHTML = (isSug?'✓ ':'')+ r.nome + (isSug?' ← sugerida':'');
+    btn.onclick = function(){ document.getElementById('pRota').value = r.id; showToast('Rota '+r.nome+' selecionada!'); };
+    acoes.appendChild(btn);
+  });
 }
 
 // ================================================================
@@ -1205,7 +1329,7 @@ async function analisarComClaude(apiKey, postosPorDia, horas, tempoPosto, distTo
 
     if(!response.ok) {
       var err = await response.json();
-      loadDiv.querySelector('.ia-loading').innerHTML = '<span style="color:var(--red)">❌ Erro da API: '+(err.error?.message||'Verifique sua chave Anthropic.')+'</span>';
+      loadDiv.querySelector('.ia-loading').innerHTML = '<span style="color:var(--red)">❌ Erro da API: '+((err.error && err.error.message ? err.error.message : '')||'Verifique sua chave Anthropic.')+'</span>';
       return;
     }
 
@@ -1440,16 +1564,19 @@ document.addEventListener('DOMContentLoaded', function(){
 </script>
 
 <!-- Google Maps API -->
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD-placeholder&callback=initMapOnLoad" async defer onerror="mapError()"></script>
 <script>
 function initMapOnLoad(){
-  if(document.getElementById('panel-mapa').classList.contains('active')){
-    window._mapLoaded=true;
-    initMap();
-  }
+  try {
+    if(document.getElementById('panel-mapa').classList.contains('active')){
+      window._mapLoaded=true;
+      initMap();
+    }
+  } catch(e){ mapError(); }
 }
 function mapError(){
-  document.getElementById('map').innerHTML=
+  var el = document.getElementById('map');
+  if(!el) return;
+  el.innerHTML=
     '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted);gap:12px">'+
     '<div style="font-size:48px">🗺️</div>'+
     '<p style="font-size:14px;text-align:center">Para o mapa interativo, adicione sua chave da Google Maps API.<br><br>'+
@@ -1459,5 +1586,6 @@ function mapError(){
     '</div>';
 }
 </script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD-placeholder&callback=initMapOnLoad" async defer onerror="mapError()"></script>
 </body>
 </html>
