@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Supervisor de Rotas v4 — Grupo M.S Segurança</title>
+<title>Supervisor de Rotas v6 — Grupo M.S Segurança</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -301,6 +301,175 @@
   .supervisor-ativo-bar select:focus { outline:none;border-color:var(--accent); }
   .supervisor-ativo-badge { background:rgba(16,185,129,0.15);color:var(--green);font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;white-space:nowrap; }
 </style>
+
+<!-- ===== FIREBASE SDK ===== -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getFirestore, collection, doc, setDoc, getDocs, deleteDoc,
+    onSnapshot, addDoc, query, orderBy, serverTimestamp, writeBatch, getDoc
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCvKBlRPvSFIO8DmfsFe-jTv2AQ6rpJGfM",
+    authDomain: "rota-do-supervisor.firebaseapp.com",
+    projectId: "rota-do-supervisor",
+    storageBucket: "rota-do-supervisor.firebasestorage.app",
+    messagingSenderId: "386459582810",
+    appId: "1:386459582810:web:f32fc9144ec0c79756f363"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  // ── Expõe o db e helpers no escopo global ──
+  window._db = db;
+  window._fs = {
+    collection, doc, setDoc, getDocs, deleteDoc,
+    onSnapshot, addDoc, query, orderBy, serverTimestamp, writeBatch, getDoc
+  };
+
+  // ── Indicador de status de conexão ──
+  window._fbReady = false;
+
+  // ── COLABORADORES: escuta em tempo real ──
+  onSnapshot(collection(db, 'colaboradores'), function(snap) {
+    var lista = [];
+    snap.forEach(function(d){ lista.push(Object.assign({ _id: d.id }, d.data())); });
+    lista.sort(function(a,b){ return (a.nome||'').localeCompare(b.nome||''); });
+    window._colaboradoresDB = lista;
+    if(typeof renderBancoDados === 'function') renderBancoDados();
+  });
+
+  // ── SUPERVISORES: escuta em tempo real ──
+  onSnapshot(collection(db, 'supervisores'), function(snap) {
+    var lista = [];
+    snap.forEach(function(d){ lista.push(Object.assign({ _id: d.id }, d.data())); });
+    lista.sort(function(a,b){ return (a.nome||'').localeCompare(b.nome||''); });
+    window._supervisoresDB = lista;
+    if(typeof renderBancoDados === 'function') renderBancoDados();
+    if(typeof renderSupervisorAtivoSelect === 'function') renderSupervisorAtivoSelect();
+  });
+
+  // ── VISITAS: escuta em tempo real ──
+  onSnapshot(
+    query(collection(db, 'visitas'), orderBy('createdAt', 'desc')),
+    function(snap) {
+      var lista = [];
+      snap.forEach(function(d){ lista.push(Object.assign({ _id: d.id }, d.data())); });
+      window._visitasDB = lista;
+      // Sincroniza localStorage como cache local
+      localStorage.setItem('ms_visitas', JSON.stringify(lista.map(function(v){
+        var vv = Object.assign({}, v);
+        delete vv._id; delete vv.createdAt;
+        return vv;
+      })));
+      if(typeof renderHistorico === 'function') renderHistorico();
+    }
+  );
+
+  // ── POSTOS CUSTOM: escuta em tempo real ──
+  onSnapshot(collection(db, 'postos_custom'), function(snap) {
+    var lista = [];
+    snap.forEach(function(d){ lista.push(Object.assign({ _id: d.id }, d.data())); });
+    window._postosCustomDB = lista;
+    window.POSTOS_CUSTOM = lista;
+    if(typeof buildPostos === 'function') {
+      buildPostos();
+      if(typeof reRenderAll === 'function') reRenderAll();
+    }
+  });
+
+  // ── SUPERVISOR ATIVO: escuta em tempo real ──
+  onSnapshot(doc(db, 'config', 'supervisor_ativo'), function(snap) {
+    if(snap.exists()) {
+      var nome = snap.data().nome || '';
+      localStorage.setItem('ms_supervisor_ativo', nome);
+      if(typeof renderSupervisorAtivoSelect === 'function') renderSupervisorAtivoSelect();
+    }
+  });
+
+  window._fbReady = true;
+  console.log('[Firebase] Conectado ao Firestore ✅');
+
+  // ── FUNÇÕES FIREBASE EXPOSTAS GLOBALMENTE ──
+
+  // Colaboradores
+  window.fb_adicionarColab = async function(nome, cargo) {
+    try {
+      await addDoc(collection(db, 'colaboradores'), { nome: nome, cargo: cargo || 'Vigilante', createdAt: serverTimestamp() });
+      return true;
+    } catch(e) { console.error(e); return false; }
+  };
+  window.fb_removerColab = async function(id) {
+    try { await deleteDoc(doc(db, 'colaboradores', id)); return true; }
+    catch(e) { console.error(e); return false; }
+  };
+
+  // Supervisores
+  window.fb_adicionarSuperv = async function(nome) {
+    try {
+      await addDoc(collection(db, 'supervisores'), { nome: nome, createdAt: serverTimestamp() });
+      return true;
+    } catch(e) { console.error(e); return false; }
+  };
+  window.fb_removerSuperv = async function(id) {
+    try { await deleteDoc(doc(db, 'supervisores', id)); return true; }
+    catch(e) { console.error(e); return false; }
+  };
+
+  // Supervisor ativo
+  window.fb_setSupervisorAtivo = async function(nome) {
+    try {
+      await setDoc(doc(db, 'config', 'supervisor_ativo'), { nome: nome, updatedAt: serverTimestamp() });
+      return true;
+    } catch(e) { console.error(e); return false; }
+  };
+
+  // Visitas
+  window.fb_salvarVisita = async function(visita) {
+    try {
+      var v = Object.assign({}, visita, { createdAt: serverTimestamp() });
+      await addDoc(collection(db, 'visitas'), v);
+      return true;
+    } catch(e) { console.error(e); return false; }
+  };
+  window.fb_limparVisitas = async function() {
+    try {
+      var snap = await getDocs(collection(db, 'visitas'));
+      var batch = writeBatch(db);
+      snap.forEach(function(d){ batch.delete(d.ref); });
+      await batch.commit();
+      return true;
+    } catch(e) { console.error(e); return false; }
+  };
+
+  // Postos custom
+  window.fb_salvarPostoCustom = async function(posto) {
+    try {
+      var p = Object.assign({}, posto, { createdAt: serverTimestamp() });
+      delete p._id;
+      if(posto._id) {
+        await setDoc(doc(db, 'postos_custom', String(posto._id)), p);
+      } else {
+        await addDoc(collection(db, 'postos_custom'), p);
+      }
+      return true;
+    } catch(e) { console.error(e); return false; }
+  };
+  window.fb_removerPostoCustom = async function(id) {
+    try {
+      // Tenta remover por documento com id como campo
+      var snap = await getDocs(collection(db, 'postos_custom'));
+      var batch = writeBatch(db);
+      snap.forEach(function(d){
+        if(d.data().id === id) batch.delete(d.ref);
+      });
+      await batch.commit();
+      return true;
+    } catch(e) { console.error(e); return false; }
+  };
+</script>
 </head>
 <body>
 
@@ -309,7 +478,13 @@
     <div class="logo-icon">MS</div>
     <div class="logo-text">Grupo M.S <span>Segurança</span></div>
   </div>
-  <div class="header-date" id="headerDate"></div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="header-date" id="headerDate"></div>
+    <div id="fbStatusBadge" style="display:flex;align-items:center;gap:5px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap">
+      <span id="fbDot" style="width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block"></span>
+      <span id="fbStatusText">Firebase...</span>
+    </div>
+  </div>
 </header>
 
 <div class="tabs">
@@ -788,9 +963,15 @@ var POSTOS_CUSTOM = [];
 var POSTOS = [];
 
 function loadCustomPostos() {
-  POSTOS_CUSTOM = JSON.parse(localStorage.getItem('ms_postos_custom') || '[]');
+  // Firebase listener atualiza window._postosCustomDB; localStorage como fallback
+  if(window._postosCustomDB && window._postosCustomDB.length) {
+    POSTOS_CUSTOM = window._postosCustomDB;
+  } else {
+    POSTOS_CUSTOM = JSON.parse(localStorage.getItem('ms_postos_custom') || '[]');
+  }
 }
 function saveCustomPostos() {
+  // Persiste localmente como cache; Firebase é a fonte principal
   localStorage.setItem('ms_postos_custom', JSON.stringify(POSTOS_CUSTOM));
 }
 function buildPostos() {
@@ -1112,6 +1293,11 @@ function salvarVistoriaModal() {
     pct: Math.round((checked/total)*100)
   };
 
+  // Salva no Firebase (fonte principal)
+  if(window.fb_salvarVisita) {
+    window.fb_salvarVisita(visita);
+  }
+  // Salva no localStorage como cache imediato
   var historico = JSON.parse(localStorage.getItem('ms_visitas') || '[]');
   historico.unshift(visita);
   localStorage.setItem('ms_visitas', JSON.stringify(historico));
@@ -1523,6 +1709,13 @@ function salvarPosto() {
     showToast('✅ Posto "'+nome+'" cadastrado!');
   }
 
+  // Salva no Firebase e cache local
+  if(window.fb_salvarPostoCustom) {
+    var postoParaSalvar = editId
+      ? { id:parseInt(editId), nome:nome, cidade:cidade, tipo:tipo, rota:rota, lat:lat, lng:lng }
+      : POSTOS_CUSTOM[POSTOS_CUSTOM.length - 1];
+    window.fb_salvarPostoCustom(postoParaSalvar);
+  }
   saveCustomPostos();
   buildPostos();
   reRenderAll();
@@ -1577,6 +1770,7 @@ function deletarPosto(id) {
   if(!confirm('Excluir o posto "'+p.nome+'"? Esta ação não pode ser desfeita.')){ return; }
   POSTOS_CUSTOM = POSTOS_CUSTOM.filter(function(c){ return c.id !== id; });
   ROTAS.forEach(function(r){ r.postos = r.postos.filter(function(pid){ return pid !== id; }); });
+  if(window.fb_removerPostoCustom) window.fb_removerPostoCustom(id);
   saveCustomPostos();
   buildPostos();
   reRenderAll();
@@ -2201,8 +2395,8 @@ function renderChecklist() {
     '<div><h2>'+posto.nome+'</h2><p>'+posto.cidade+' · '+(rota?rota.nome:'—')+' · '+posto.tipo+'</p></div>'+
   '</div>';
   html += '<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>';
-  var supervOpts = buildSelectOpts(getSupervisores(), 'Selecione o supervisor');
-  var colabOpts = buildSelectOpts(getColaboradores(), 'Selecione o colaborador');
+  var supervOpts = buildSelectOpts(getSupervisores().map(function(s){ return s.nome||s; }), 'Selecione o supervisor');
+  var colabOpts = buildSelectOpts(getColaboradores().map(function(c){ return c.nome||c; }), 'Selecione o colaborador');
   var supervisorAtivo = localStorage.getItem('ms_supervisor_ativo')||'';
   html += '<div class="checklist-meta">'+
     '<div class="meta-field"><label>Supervisor</label><select id="supervInput" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:Barlow,sans-serif;font-size:13px;width:100%">'+supervOpts+'</select></div>'+
@@ -2265,6 +2459,11 @@ function salvarChecklist(postoId) {
     obs:document.getElementById('obsInput')?.value||'',
     total:total, checked:checked, noks:noks, pct:Math.round((checked/total)*100)
   };
+  // Salva no Firebase
+  if(window.fb_salvarVisita) {
+    window.fb_salvarVisita(visita);
+  }
+  // Cache local imediato
   var historico = JSON.parse(localStorage.getItem('ms_visitas')||'[]');
   historico.unshift(visita);
   localStorage.setItem('ms_visitas', JSON.stringify(historico));
@@ -2283,7 +2482,10 @@ function imprimirChecklist() { window.print(); }
 // HISTÓRICO
 // ================================================================
 function renderHistorico() {
-  var historico = JSON.parse(localStorage.getItem('ms_visitas')||'[]');
+  // Prioriza dados do Firebase; cai para localStorage como fallback
+  var historico = (window._visitasDB && window._visitasDB.length)
+    ? window._visitasDB
+    : JSON.parse(localStorage.getItem('ms_visitas')||'[]');
   var el = document.getElementById('historicoContent');
   if(!historico.length){
     el.innerHTML='<div class="empty-state"><div class="icon">📋</div><p>Nenhuma visita registrada ainda.<br>Faça um checklist para ver o histórico aqui.</p></div>';
@@ -2302,10 +2504,19 @@ function renderHistorico() {
 }
 
 function limparHistorico() {
-  if(confirm('Deseja apagar todo o histórico de visitas?')){
-    localStorage.removeItem('ms_visitas');
-    renderHistorico();
-    showToast('Histórico limpo.');
+  if(confirm('Deseja apagar todo o histórico de visitas? Esta ação remove os dados do Firebase também.')){
+    if(window.fb_limparVisitas) {
+      window.fb_limparVisitas().then(function(){
+        window._visitasDB = [];
+        localStorage.removeItem('ms_visitas');
+        renderHistorico();
+        showToast('Histórico limpo na nuvem ✅');
+      });
+    } else {
+      localStorage.removeItem('ms_visitas');
+      renderHistorico();
+      showToast('Histórico limpo.');
+    }
   }
 }
 
@@ -2355,12 +2566,18 @@ function reRenderAll() {
 // BANCO DE DADOS — COLABORADORES E SUPERVISORES
 // ================================================================
 function getColaboradores() {
+  // Firebase listener mantém _colaboradoresDB atualizado
+  if(window._colaboradoresDB) return window._colaboradoresDB;
   return JSON.parse(localStorage.getItem('ms_colaboradores') || '[]');
 }
 function getSupervisores() {
-  return JSON.parse(localStorage.getItem('ms_supervisores') || '["Paulo Roberto Jardim"]');
+  if(window._supervisoresDB && window._supervisoresDB.length) return window._supervisoresDB;
+  return JSON.parse(localStorage.getItem('ms_supervisores') || '[]').map(function(s){
+    return typeof s === 'string' ? { nome: s } : s;
+  });
 }
 function salvarColaboradores(arr) {
+  // Firebase é fonte; localStorage apenas como cache
   localStorage.setItem('ms_colaboradores', JSON.stringify(arr));
 }
 function salvarSupervisores(arr) {
@@ -2381,58 +2598,94 @@ function adicionarColab() {
   if(!nome){ showToast('⚠️ Informe o nome do colaborador','error'); return; }
   var lista = getColaboradores();
   if(lista.find(function(c){ return c.nome === nome; })){ showToast('⚠️ Colaborador já cadastrado','error'); return; }
-  lista.push({ nome: nome, cargo: cargo || 'Vigilante' });
-  salvarColaboradores(lista);
   document.getElementById('novoColabNome').value = '';
   document.getElementById('novoColabCargo').value = '';
-  renderBancoDados();
-  showToast('✅ Colaborador "'+nome+'" cadastrado!');
+  if(window.fb_adicionarColab) {
+    window.fb_adicionarColab(nome, cargo || 'Vigilante').then(function(ok){
+      if(ok) showToast('✅ Colaborador "'+nome+'" salvo na nuvem!');
+      else showToast('❌ Erro ao salvar no Firebase','error');
+    });
+  } else {
+    lista.push({ nome: nome, cargo: cargo || 'Vigilante' });
+    salvarColaboradores(lista);
+    renderBancoDados();
+    showToast('✅ Colaborador "'+nome+'" cadastrado!');
+  }
 }
 
-function removerColab(nome) {
+function removerColab(id, nome) {
   if(!confirm('Remover colaborador "'+nome+'"?')) return;
-  var lista = getColaboradores().filter(function(c){ return c.nome !== nome; });
-  salvarColaboradores(lista);
-  renderBancoDados();
-  showToast('Colaborador removido.');
+  if(window.fb_removerColab) {
+    window.fb_removerColab(id).then(function(ok){
+      if(ok) showToast('Colaborador removido da nuvem.');
+      else showToast('❌ Erro ao remover','error');
+    });
+  } else {
+    var lista = getColaboradores().filter(function(c){ return c.nome !== nome; });
+    salvarColaboradores(lista);
+    renderBancoDados();
+    showToast('Colaborador removido.');
+  }
 }
 
 function adicionarSuperv() {
   var nome = document.getElementById('novoSupervNome').value.trim();
   if(!nome){ showToast('⚠️ Informe o nome do supervisor','error'); return; }
   var lista = getSupervisores();
-  if(lista.indexOf(nome) !== -1){ showToast('⚠️ Supervisor já cadastrado','error'); return; }
-  lista.push(nome);
-  salvarSupervisores(lista);
+  if(lista.find(function(s){ return s.nome === nome; })){ showToast('⚠️ Supervisor já cadastrado','error'); return; }
   document.getElementById('novoSupervNome').value = '';
-  renderBancoDados();
-  renderSupervisorAtivoSelect();
-  showToast('✅ Supervisor "'+nome+'" cadastrado!');
+  if(window.fb_adicionarSuperv) {
+    window.fb_adicionarSuperv(nome).then(function(ok){
+      if(ok) showToast('✅ Supervisor "'+nome+'" salvo na nuvem!');
+      else showToast('❌ Erro ao salvar no Firebase','error');
+    });
+  } else {
+    lista.push({ nome: nome });
+    salvarSupervisores(lista.map(function(s){ return s.nome; }));
+    renderBancoDados();
+    renderSupervisorAtivoSelect();
+    showToast('✅ Supervisor "'+nome+'" cadastrado!');
+  }
 }
 
-function removerSuperv(nome) {
+function removerSuperv(id, nome) {
   if(!confirm('Remover supervisor "'+nome+'"?')) return;
-  var lista = getSupervisores().filter(function(s){ return s !== nome; });
-  salvarSupervisores(lista);
-  var ativo = localStorage.getItem('ms_supervisor_ativo');
-  if(ativo === nome) localStorage.removeItem('ms_supervisor_ativo');
-  renderBancoDados();
-  renderSupervisorAtivoSelect();
-  showToast('Supervisor removido.');
+  if(window.fb_removerSuperv) {
+    window.fb_removerSuperv(id).then(function(ok){
+      if(ok) {
+        var ativo = localStorage.getItem('ms_supervisor_ativo');
+        if(ativo === nome) {
+          localStorage.removeItem('ms_supervisor_ativo');
+          if(window.fb_setSupervisorAtivo) window.fb_setSupervisorAtivo('');
+        }
+        showToast('Supervisor removido da nuvem.');
+      } else showToast('❌ Erro ao remover','error');
+    });
+  } else {
+    var lista = getSupervisores().filter(function(s){ return s.nome !== nome; });
+    salvarSupervisores(lista.map(function(s){ return s.nome; }));
+    var ativo = localStorage.getItem('ms_supervisor_ativo');
+    if(ativo === nome) localStorage.removeItem('ms_supervisor_ativo');
+    renderBancoDados();
+    renderSupervisorAtivoSelect();
+    showToast('Supervisor removido.');
+  }
 }
 
 function salvarSupervisorAtivo() {
   var sel = document.getElementById('supervisorAtivoSelect');
   var nome = sel ? sel.value : '';
+  localStorage.setItem('ms_supervisor_ativo', nome);
+  var badge = document.getElementById('supervisorAtivoBadge');
   if(nome) {
-    localStorage.setItem('ms_supervisor_ativo', nome);
-    var badge = document.getElementById('supervisorAtivoBadge');
     if(badge){ badge.style.display=''; badge.textContent = '✅ '+nome+' em serviço'; }
     showToast('👤 Supervisor ativo: '+nome);
   } else {
-    localStorage.removeItem('ms_supervisor_ativo');
-    var badge2 = document.getElementById('supervisorAtivoBadge');
-    if(badge2) badge2.style.display='none';
+    if(badge) badge.style.display='none';
+  }
+  // Sincroniza no Firebase para todos verem
+  if(window.fb_setSupervisorAtivo) {
+    window.fb_setSupervisorAtivo(nome);
   }
 }
 
@@ -2443,9 +2696,10 @@ function renderSupervisorAtivoSelect() {
   var supervisores = getSupervisores();
   sel.innerHTML = '<option value="">— Selecione o supervisor —</option>';
   supervisores.forEach(function(s){
+    var nome = s.nome || s;
     var opt = document.createElement('option');
-    opt.value = s; opt.textContent = s;
-    if(s === ativo) opt.selected = true;
+    opt.value = nome; opt.textContent = nome;
+    if(nome === ativo) opt.selected = true;
     sel.appendChild(opt);
   });
   var badge = document.getElementById('supervisorAtivoBadge');
@@ -2472,10 +2726,11 @@ function renderBancoDados() {
       cl.innerHTML = '<div class="db-empty">Nenhum colaborador cadastrado.<br>Adicione acima.</div>';
     } else {
       cl.innerHTML = colab.map(function(c){
+        var fid = c._id || c.nome;
         return '<div class="db-item">'+
           '<div class="db-item-icon" style="background:rgba(59,130,246,0.15);color:#3b82f6">👷</div>'+
           '<div class="db-item-name">'+c.nome+'<br><span style="font-size:11px;color:var(--muted)">'+c.cargo+'</span></div>'+
-          '<button onclick="removerColab(''+c.nome.replace(/'/g,"\'")+'')" class="btn-delete-posto">✕</button>'+
+          '<button onclick="removerColab(''+fid.replace(/'/g,"\'")+'',''+c.nome.replace(/'/g,"\'")+'')" class="btn-delete-posto">✕</button>'+
         '</div>';
       }).join('');
     }
@@ -2488,10 +2743,12 @@ function renderBancoDados() {
       sl.innerHTML = '<div class="db-empty">Nenhum supervisor cadastrado.<br>Adicione acima.</div>';
     } else {
       sl.innerHTML = superv.map(function(s){
+        var nome = s.nome || s;
+        var fid = s._id || nome;
         return '<div class="db-item">'+
           '<div class="db-item-icon" style="background:rgba(245,158,11,0.15);color:var(--accent)">🎖️</div>'+
-          '<div class="db-item-name">'+s+'</div>'+
-          '<button onclick="removerSuperv(''+s.replace(/'/g,"\'")+'')" class="btn-delete-posto">✕</button>'+
+          '<div class="db-item-name">'+nome+'</div>'+
+          '<button onclick="removerSuperv(''+fid.replace(/'/g,"\'")+'',''+nome.replace(/'/g,"\'")+'')" class="btn-delete-posto">✕</button>'+
         '</div>';
       }).join('');
     }
@@ -2504,11 +2761,11 @@ function atualizarSelectsVistoria() {
   var colabSel = document.getElementById('vistoriaColab');
   var supervisorAtivo = localStorage.getItem('ms_supervisor_ativo') || '';
   if(supervSel) {
-    supervSel.innerHTML = buildSelectOpts(getSupervisores(), 'Selecione o supervisor');
+    supervSel.innerHTML = buildSelectOpts(getSupervisores().map(function(s){ return s.nome||s; }), 'Selecione o supervisor');
     if(supervisorAtivo) supervSel.value = supervisorAtivo;
   }
   if(colabSel) {
-    colabSel.innerHTML = buildSelectOpts(getColaboradores().map(function(c){ return c.nome; }), 'Selecione o colaborador');
+    colabSel.innerHTML = buildSelectOpts(getColaboradores().map(function(c){ return c.nome||c; }), 'Selecione o colaborador');
   }
 }
 
@@ -2560,8 +2817,31 @@ document.addEventListener('DOMContentLoaded', function(){
   // Modal fecha com clique fora
   document.getElementById('rotaModal').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
 
+  // Firebase status badge updater
+  var _fbCheck = setInterval(function(){
+    var dot = document.getElementById('fbDot');
+    var txt = document.getElementById('fbStatusText');
+    if(!dot || !txt) return;
+    if(window._visitasDB !== undefined || window._colaboradoresDB !== undefined || window._supervisoresDB !== undefined) {
+      dot.style.background = 'var(--green)';
+      txt.textContent = '☁️ Firebase OK';
+      txt.style.color = 'var(--green)';
+      clearInterval(_fbCheck);
+    }
+  }, 1200);
+  setTimeout(function(){
+    var dot = document.getElementById('fbDot');
+    var txt = document.getElementById('fbStatusText');
+    if(dot && txt && txt.textContent !== '☁️ Firebase OK'){
+      dot.style.background = 'var(--red)';
+      txt.textContent = '⚠️ Sem conexão';
+      txt.style.color = 'var(--red)';
+    }
+    clearInterval(_fbCheck);
+  }, 8000);
+
   // Versão para debug
-  console.log('[MS Rotas v5.0] Carregado. Funções: geocodificar='+typeof geocodificar+' analisarRotaPorGeo='+typeof analisarRotaPorGeo+' abrirGoogleMaps='+typeof abrirGoogleMaps);
+  console.log('[MS Rotas v6.0] Carregado com Firebase Firestore. geocodificar='+typeof geocodificar);
 });
 </script>
 
