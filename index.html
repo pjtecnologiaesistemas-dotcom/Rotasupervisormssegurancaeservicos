@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Supervisor de Rotas v6 — Grupo M.S Segurança</title>
+<title>Supervisor de Rotas v8 — Grupo M.S Segurança</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -57,14 +57,21 @@
   .filter-btn { padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid;transition:all 0.15s;background:none;font-family:'Barlow',sans-serif; }
   .filter-btn.active { color:#000!important; }
 
-  .posto-item { padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;display:flex;align-items:flex-start;gap:10px; }
+  .posto-item { padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;display:flex;align-items:center;gap:10px; }
   .posto-item:hover { background:var(--surface2); }
   .posto-item.selected { background:var(--surface2);border-left:3px solid var(--accent); }
-  .posto-badge { width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:2px;color:#fff; }
+  .posto-item.visitado { background:rgba(16,185,129,0.06);border-left:3px solid var(--green); }
+  .posto-item.visitado .posto-name { color:var(--muted);text-decoration:line-through; }
+  .posto-badge { width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;color:#fff; }
   .posto-info { flex:1;min-width:0; }
   .posto-name { font-weight:600;font-size:13px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
   .posto-city { font-size:11px;color:var(--muted);margin-top:2px; }
-  .posto-rota-tag { font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;white-space:nowrap;flex-shrink:0;margin-top:4px;align-self:flex-start; }
+  .posto-rota-tag { font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;white-space:nowrap;flex-shrink:0; }
+  .btn-visitar { flex-shrink:0;border:none;border-radius:6px;padding:5px 8px;font-size:11px;font-weight:700;cursor:pointer;transition:all 0.15s;font-family:'Barlow',sans-serif;line-height:1; }
+  .btn-visitar.pendente { background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.35); }
+  .btn-visitar.pendente:hover { background:#10b981;color:#fff; }
+  .btn-visitar.feito { background:rgba(16,185,129,0.2);color:#10b981;border:1px solid rgba(16,185,129,0.4); }
+  .btn-visitar.feito:hover { background:rgba(239,68,68,0.15);color:#ef4444;border-color:rgba(239,68,68,0.4); }
 
   #map { border-radius:10px;border:1px solid var(--border);width:100%;height:100%;min-height:500px; }
 
@@ -521,6 +528,7 @@
       <button class="map-ctrl-btn" onclick="filtrarMapaRota(1)" id="mapBtn1" style="color:#3b82f6">● Alpha</button>
       <button class="map-ctrl-btn" onclick="filtrarMapaRota(2)" id="mapBtn2" style="color:#10b981">● Beta</button>
       <button class="map-ctrl-btn" onclick="filtrarMapaRota(3)" id="mapBtn3" style="color:#f59e0b">● Gamma</button>
+      <button class="map-ctrl-btn" onclick="filtrarMapaRota(4)" id="mapBtn4" style="color:#8b5cf6">● Delta</button>
       <button class="map-ctrl-btn" onclick="togglePolylines()" id="btnPolylines">〰 Mostrar Rotas</button>
       <button class="map-ctrl-btn" onclick="centralizarMapa()" style="margin-left:auto">⌖ Centralizar</button>
     </div>
@@ -532,6 +540,7 @@
         <button onclick="abrirRotaMaps(1)" style="background:#3b82f6;border:none;color:#fff;padding:7px 14px;border-radius:7px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🚗 Alpha</button>
         <button onclick="abrirRotaMaps(2)" style="background:#10b981;border:none;color:#fff;padding:7px 14px;border-radius:7px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🚗 Beta</button>
         <button onclick="abrirRotaMaps(3)" style="background:#f59e0b;border:none;color:#000;padding:7px 14px;border-radius:7px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🚗 Gamma</button>
+        <button onclick="abrirRotaMaps(4)" style="background:#8b5cf6;border:none;color:#fff;padding:7px 14px;border-radius:7px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🚗 Delta</button>
       </div>
     </div>
     <div class="map-layout" style="height:calc(100vh - 175px)">
@@ -544,6 +553,7 @@
           <button class="filter-btn" id="fb1" onclick="filtrarSidebar('1',this)" style="color:#3b82f6;border-color:#3b82f6">Alpha</button>
           <button class="filter-btn" id="fb2" onclick="filtrarSidebar('2',this)" style="color:#10b981;border-color:#10b981">Beta</button>
           <button class="filter-btn" id="fb3" onclick="filtrarSidebar('3',this)" style="color:#f59e0b;border-color:#f59e0b">Gamma</button>
+          <button class="filter-btn" id="fb4" onclick="filtrarSidebar('4',this)" style="color:#8b5cf6;border-color:#8b5cf6">Delta</button>
         </div>
         <div id="postosList"></div>
       </div>
@@ -709,9 +719,15 @@
             <p>Parâmetros para cálculo de rotas</p>
           </div>
           <div class="ia-config-body">
+            <div style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);border-radius:7px;padding:10px 12px;margin-bottom:14px;font-size:12px;line-height:1.7">
+              <div style="font-family:'Barlow Condensed',sans-serif;font-weight:700;color:#8b5cf6;font-size:13px;margin-bottom:4px">📋 Escala Operacional</div>
+              <div style="color:var(--text)">⏰ Horário: <strong>18:00 – 06:00</strong> (noturno)</div>
+              <div style="color:var(--text)">🔄 Escala: <strong>12×36</strong></div>
+              <div style="color:var(--text)">📍 Frequência: <strong>2 visitas/posto/semana</strong></div>
+            </div>
             <div class="config-field">
-              <label>⏰ Horas de Trabalho por Dia</label>
-              <input class="config-input" id="cfgHoras" type="number" value="8" min="4" max="12" step="0.5" />
+              <label>⏰ Horas de Trabalho por Turno</label>
+              <input class="config-input" id="cfgHoras" type="number" value="12" min="6" max="12" step="0.5" />
             </div>
             <div class="config-field">
               <label>🏢 Tempo por Posto (minutos)</label>
@@ -934,27 +950,55 @@
 // DADOS BASE (hardcoded)
 // ================================================================
 var POSTOS_BASE = [
-  { id:1,  nome:"Residencial Vale Verde",  cidade:"Mogi Guaçu", lat:-22.378214, lng:-46.94969,  rota:1, tipo:"Residencial", endereco:"" },
-  { id:2,  nome:"Morro Vermelho II",       cidade:"Mogi Guaçu", lat:-22.407241, lng:-46.941305, rota:1, tipo:"Residencial", endereco:"" },
-  { id:3,  nome:"Jardim da Colina",        cidade:"Mogi Mirim", lat:-22.431314, lng:-46.978112, rota:3, tipo:"Residencial", endereco:"" },
-  { id:4,  nome:"Icobit Brasil",           cidade:"Mogi Guaçu", lat:-22.295264, lng:-46.972014, rota:2, tipo:"Industrial",  endereco:"" },
-  { id:5,  nome:"HFM Logística",           cidade:"Mogi Guaçu", lat:-22.306621, lng:-46.967074, rota:2, tipo:"Industrial",  endereco:"" },
-  { id:6,  nome:"CRK Baseio",              cidade:"Mogi Guaçu", lat:-22.326693, lng:-46.960720, rota:2, tipo:"Industrial",  endereco:"" },
-  { id:7,  nome:"Portal das Hadassas",     cidade:"Mogi Guaçu", lat:-22.359704, lng:-46.961635, rota:1, tipo:"Residencial", endereco:"" },
-  { id:8,  nome:"Portal das Zinias",       cidade:"Mogi Guaçu", lat:-22.360438, lng:-46.961302, rota:1, tipo:"Residencial", endereco:"" },
-  { id:9,  nome:"Clube Oregon",            cidade:"Mogi Guaçu", lat:-22.364873, lng:-46.956757, rota:1, tipo:"Residencial", endereco:"" },
-  { id:10, nome:"Reserva Central",         cidade:"Mogi Guaçu", lat:-22.371433, lng:-46.950728, rota:1, tipo:"Residencial", endereco:"" },
-  { id:11, nome:"Reserva do Lago",         cidade:"Mogi Guaçu", lat:-22.357025, lng:-46.910385, rota:2, tipo:"Residencial", endereco:"" },
-  { id:12, nome:"Residencial San Remo",    cidade:"Mogi Guaçu", lat:-22.362256, lng:-46.933986, rota:2, tipo:"Residencial", endereco:"" },
-  { id:13, nome:"W Park",                  cidade:"Mogi Mirim", lat:-22.445305, lng:-47.020787, rota:3, tipo:"Industrial",  endereco:"" },
-  { id:14, nome:"Irmãos Davoli",           cidade:"Mogi Mirim", lat:-22.462016, lng:-46.982527, rota:3, tipo:"Comercial",   endereco:"" },
-  { id:15, nome:"Fazenda Paineiras",       cidade:"Mogi Mirim", lat:-22.464066, lng:-46.959464, rota:3, tipo:"Residencial", endereco:"" }
+  // Rota 2 - Industrial/Comercial Mogi Guaçu Norte
+  { id:1,  nome:"Icobit Brasil",                   cidade:"Mogi Guaçu", lat:-22.295264, lng:-46.972014, rota:2, tipo:"Industrial",  endereco:"" },
+  { id:2,  nome:"Gaplan Caminhões",                cidade:"Mogi Guaçu", lat:-22.297850, lng:-46.977920, rota:2, tipo:"Comercial",   endereco:"Av. Min. Roberto Cardoso Alves, 1895" },
+  { id:3,  nome:"Amera",                           cidade:"Mogi Guaçu", lat:-22.302100, lng:-46.974300, rota:2, tipo:"Industrial",  endereco:"Parque Industrial" },
+  { id:4,  nome:"HFM Logística e Transportes",     cidade:"Mogi Guaçu", lat:-22.306621, lng:-46.967074, rota:2, tipo:"Industrial",  endereco:"" },
+  { id:5,  nome:"CRK Baseio",                      cidade:"Mogi Guaçu", lat:-22.326693, lng:-46.960720, rota:2, tipo:"Industrial",  endereco:"" },
+  // Rota 2 - Residencial Mogi Guaçu Leste
+  { id:6,  nome:"Reserva do Lago",                 cidade:"Mogi Guaçu", lat:-22.357025, lng:-46.910385, rota:2, tipo:"Residencial", endereco:"" },
+  { id:7,  nome:"Residencial San Remo",            cidade:"Mogi Guaçu", lat:-22.362256, lng:-46.933986, rota:2, tipo:"Residencial", endereco:"" },
+  // Rota 1 - Residencial Mogi Guaçu Sul
+  { id:8,  nome:"Condomínio Vila Nova",            cidade:"Mogi Guaçu", lat:-22.356500, lng:-46.954800, rota:1, tipo:"Residencial", endereco:"" },
+  { id:9,  nome:"Portal Vila das Hadassas",        cidade:"Mogi Guaçu", lat:-22.359704, lng:-46.961635, rota:1, tipo:"Residencial", endereco:"" },
+  { id:10, nome:"Portal Vila das Zinias",          cidade:"Mogi Guaçu", lat:-22.360438, lng:-46.961302, rota:1, tipo:"Residencial", endereco:"" },
+  { id:11, nome:"Portal Vila das Borboletas",      cidade:"Mogi Guaçu", lat:-22.361200, lng:-46.946500, rota:1, tipo:"Residencial", endereco:"Loteamento Parque Real Guaçu" },
+  { id:12, nome:"Residencial Clube Oregon",        cidade:"Mogi Guaçu", lat:-22.364873, lng:-46.956757, rota:1, tipo:"Residencial", endereco:"" },
+  { id:13, nome:"Reserva Central",                 cidade:"Mogi Guaçu", lat:-22.371433, lng:-46.950728, rota:1, tipo:"Residencial", endereco:"" },
+  { id:14, nome:"Residencial Vale Verde",          cidade:"Mogi Guaçu", lat:-22.378214, lng:-46.949690, rota:1, tipo:"Residencial", endereco:"" },
+  { id:15, nome:"Residencial Santa Mônica",        cidade:"Mogi Guaçu", lat:-22.385600, lng:-46.945800, rota:1, tipo:"Residencial", endereco:"Av. Santa Mônica" },
+  { id:16, nome:"Residencial Veneto",              cidade:"Mogi Guaçu", lat:-22.393500, lng:-46.938200, rota:1, tipo:"Residencial", endereco:"" },
+  { id:17, nome:"Morro Vermelho I",                cidade:"Mogi Guaçu", lat:-22.404200, lng:-46.940100, rota:1, tipo:"Residencial", endereco:"" },
+  { id:18, nome:"Morro Vermelho II",               cidade:"Mogi Guaçu", lat:-22.407241, lng:-46.941305, rota:1, tipo:"Residencial", endereco:"" },
+  { id:19, nome:"VRV Miami Residence",             cidade:"Mogi Guaçu", lat:-22.365200, lng:-46.934800, rota:1, tipo:"Residencial", endereco:"Av. Pres. Tancredo Almeida Neves, 1465 - Jd. Igaçaba" },
+  // Rota 3 - Mogi Mirim
+  { id:20, nome:"Jardim da Colina",                cidade:"Mogi Mirim", lat:-22.431314, lng:-46.978112, rota:3, tipo:"Residencial", endereco:"" },
+  { id:21, nome:"Condomínio Alvorada",             cidade:"Mogi Mirim", lat:-22.430800, lng:-46.972600, rota:3, tipo:"Residencial", endereco:"Rua Cornélio Bordignon - Saúde" },
+  { id:22, nome:"Barros Auto Peças",               cidade:"Mogi Mirim", lat:-22.434200, lng:-46.963800, rota:3, tipo:"Comercial",   endereco:"R. Laura Albani de Barros, 157 - Saúde" },
+  { id:23, nome:"Milfarma",                        cidade:"Mogi Mirim", lat:-22.432800, lng:-46.963200, rota:3, tipo:"Comercial",   endereco:"R. Laura Albani de Barros, 157 - Saúde" },
+  { id:24, nome:"Fazenda Calunga",                 cidade:"Mogi Mirim", lat:-22.450000, lng:-47.010000, rota:3, tipo:"Residencial", endereco:"" },
+  { id:25, nome:"Condomínio Empresarial W Park",   cidade:"Mogi Mirim", lat:-22.445305, lng:-47.020787, rota:3, tipo:"Industrial",  endereco:"" },
+  { id:26, nome:"Irmãos Davoli",                   cidade:"Mogi Mirim", lat:-22.462016, lng:-46.982527, rota:3, tipo:"Comercial",   endereco:"" },
+  { id:27, nome:"Good Stop / RVM",                 cidade:"Mogi Mirim", lat:-22.458200, lng:-47.025600, rota:3, tipo:"Comercial",   endereco:"Rodovia SP-340, Km 160" },
+  // Novos postos - Rede Zeferino (Spasso/SMC/Lavapes) e outros
+  { id:28, nome:"Spasso Sabores Valinhos",          cidade:"Valinhos",    lat:-22.977600, lng:-46.998300, rota:4, tipo:"Comercial",   endereco:"Av. Invernada, 854 - Parque Nova Suíça" },
+  { id:29, nome:"Spasso Sabores Jaguariúna (Estância)", cidade:"Jaguariúna", lat:-22.712800, lng:-46.990500, rota:4, tipo:"Comercial",   endereco:"R. Gaspere, 1333 - Estância das Flores" },
+  { id:30, nome:"Spasso Sabores Jaguariúna (Sta. Cruz)", cidade:"Jaguariúna", lat:-22.709200, lng:-46.997100, rota:4, tipo:"Comercial",   endereco:"R. Tomaz Jasso, 518 - Santa Cruz de Cima" },
+  { id:31, nome:"Spasso Sabores Amparo",            cidade:"Amparo",      lat:-22.699200, lng:-46.740800, rota:4, tipo:"Comercial",   endereco:"Av. Dr. Carlos Burgos, 3200 - Lot. Nardini" },
+  { id:32, nome:"Spasso Sabores Mogi Mirim (Padre Roque)", cidade:"Mogi Mirim", lat:-22.437500, lng:-46.966800, rota:3, tipo:"Comercial",   endereco:"R. Padre Roque - Jardim Áurea" },
+  { id:33, nome:"Spasso Sabores Itapira",           cidade:"Itapira",     lat:-22.441200, lng:-46.944800, rota:4, tipo:"Comercial",   endereco:"Av. Getúlio Vargas, 1420 - Vila Santa Marta" },
+  { id:34, nome:"Lavapés Tucura Mogi Mirim",        cidade:"Mogi Mirim",  lat:-22.426100, lng:-46.958700, rota:3, tipo:"Comercial",   endereco:"Praça Catharino Marangoni, 1125 - Tucura" },
+  { id:35, nome:"SMC Conchal",                      cidade:"Conchal",     lat:-22.329200, lng:-47.172800, rota:4, tipo:"Comercial",   endereco:"Conchal - SP" },
+  { id:36, nome:"SMC Mogi Guaçu (Av. Trabalhadores)", cidade:"Mogi Guaçu", lat:-22.352800, lng:-46.944200, rota:2, tipo:"Comercial",   endereco:"Av. dos Trabalhadores - Bairro do Lote" },
+  { id:37, nome:"CCi Brazil Jundiaí",                cidade:"Jundiaí",     lat:-23.197500, lng:-46.884200, rota:4, tipo:"Industrial",  endereco:"Av. Eng. Tasso Pinheiro - Aglomeração Urbana de Jundiaí" }
 ];
 
 var ROTAS = [
-  { id:1, nome:"Rota Alpha", cor:"#3b82f6", corBg:"rgba(59,130,246,0.15)",  dias:["Segunda-feira","Quarta-feira","Sexta-feira"],   postos:[7,8,9,10,1,2],    descricao:"Postos residenciais sul de Mogi Guaçu" },
-  { id:2, nome:"Rota Beta",  cor:"#10b981", corBg:"rgba(16,185,129,0.15)",  dias:["Terça-feira","Quinta-feira"],                   postos:[4,5,6,11,12],     descricao:"Industrial + residenciais leste" },
-  { id:3, nome:"Rota Gamma", cor:"#f59e0b", corBg:"rgba(245,158,11,0.15)",  dias:["Segunda-feira","Quinta-feira","Sábado"],        postos:[3,13,14,15],      descricao:"Postos em Mogi Mirim" }
+  { id:1, nome:"Rota Alpha", cor:"#3b82f6", corBg:"rgba(59,130,246,0.15)",  dias:["Segunda-feira","Quarta-feira","Sexta-feira"],   postos:[8,9,10,11,12,13,14,15,16,17,18,19],       descricao:"Postos residenciais sul de Mogi Guaçu" },
+  { id:2, nome:"Rota Beta",  cor:"#10b981", corBg:"rgba(16,185,129,0.15)",  dias:["Terça-feira","Quinta-feira"],                   postos:[1,2,3,4,5,6,7,36],                        descricao:"Industrial + residenciais leste + SMC" },
+  { id:3, nome:"Rota Gamma", cor:"#f59e0b", corBg:"rgba(245,158,11,0.15)",  dias:["Segunda-feira","Quinta-feira","Sábado"],        postos:[20,21,22,23,24,25,26,27,32,34],            descricao:"Postos em Mogi Mirim" },
+  { id:4, nome:"Rota Delta", cor:"#8b5cf6", corBg:"rgba(139,92,246,0.15)",  dias:["Terça-feira","Sexta-feira"],                    postos:[28,29,30,31,33,35,37],                        descricao:"Spasso/SMC região expandida" }
 ];
 
 // ================================================================
@@ -1417,7 +1461,7 @@ function togglePolylines() {
 
 function filtrarMapaRota(rotaId) {
   currentMapFilter = rotaId;
-  ['mapBtnTodos','mapBtn1','mapBtn2','mapBtn3'].forEach(function(id,i){
+  ['mapBtnTodos','mapBtn1','mapBtn2','mapBtn3','mapBtn4'].forEach(function(id,i){
     var el = document.getElementById(id);
     if(!el) return;
     var isActive = (i === rotaId);
@@ -1447,13 +1491,7 @@ function centerPosto(id) {
 }
 
 function selecionarChecklistExterno(id) {
-  var tabs = document.querySelectorAll('.tab');
-  var panels = document.querySelectorAll('.panel');
-  tabs.forEach(function(t){ t.classList.remove('active'); });
-  panels.forEach(function(p){ p.classList.remove('active'); });
-  // activate checklist tab (index 4)
-  tabs[4].classList.add('active');
-  document.getElementById('panel-checklist').classList.add('active');
+  showTabByName('checklist');
   document.getElementById('postosSelect').value = id;
   renderChecklist();
 }
@@ -1476,23 +1514,46 @@ function renderSidebar() {
   if(sidebarFilterRota !== 'todos') {
     postos = postos.filter(function(p){ return p.rota === parseInt(sidebarFilterRota); });
   }
+  var totalVisitados = postos.filter(function(p){ return isVisited(p.id); }).length;
   var html = '';
   postos.forEach(function(posto){
     var rota = ROTAS.find(function(r){ return r.id === posto.rota; });
     var cor = rota ? rota.cor : '#64748b';
     var corBg = rota ? rota.corBg : 'rgba(100,116,139,0.15)';
     var rotaNome = rota ? rota.nome : '—';
-    html += '<div class="posto-item" data-id="'+posto.id+'" onclick="if(window.map){centerPosto('+posto.id+');}else{showTabByName(\'mapa\');setTimeout(function(){centerPosto('+posto.id+')},500);}">' +
-      '<div class="posto-badge" style="background:'+cor+'">'+posto.id+'</div>' +
-      '<div class="posto-info">' +
+    var visitado = isVisited(posto.id);
+    var badgeIcon = visitado ? '✓' : posto.id;
+    var badgeBg = visitado ? 'var(--green)' : cor;
+    html += '<div class="posto-item'+(visitado?' visitado':'')+'" data-id="'+posto.id+'">' +
+      '<div class="posto-badge" style="background:'+badgeBg+';cursor:pointer" onclick="if(window.map){centerPosto('+posto.id+');}else{showTabByName(\'mapa\');setTimeout(function(){centerPosto('+posto.id+')},500);}">'+badgeIcon+'</div>' +
+      '<div class="posto-info" style="cursor:pointer" onclick="if(window.map){centerPosto('+posto.id+');}else{showTabByName(\'mapa\');setTimeout(function(){centerPosto('+posto.id+')},500);}">' +
         '<div class="posto-name">'+posto.nome+(isCustom(posto)?'<span style="color:var(--accent);font-size:9px;margin-left:4px">★</span>':'')+'</div>' +
         '<div class="posto-city">'+posto.cidade+' · '+posto.tipo+(posto.endereco?'<br><span style="font-size:10px;color:var(--muted)">'+posto.endereco+'</span>':'')+'</div>' +
       '</div>' +
-      '<div class="posto-rota-tag" style="background:'+corBg+';color:'+cor+';border-color:'+cor+'">'+rotaNome+'</div>' +
+      (visitado
+        ? '<button class="btn-visitar feito" onclick="event.stopPropagation();toggleVisitadoSidebar('+posto.id+')" title="Clique para desmarcar">✓ OK</button>'
+        : '<button class="btn-visitar pendente" onclick="event.stopPropagation();toggleVisitadoSidebar('+posto.id+')" title="Marcar como visitado">✓</button>'
+      ) +
     '</div>';
   });
   document.getElementById('postosList').innerHTML = html || '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Nenhum posto nesta rota</div>';
-  document.getElementById('sidebarCount').textContent = '📍 '+POSTOS.length+' Postos Cadastrados';
+  document.getElementById('sidebarCount').textContent = '📍 '+postos.length+' postos · ✓ '+totalVisitados+'/'+postos.length;
+}
+
+function toggleVisitadoSidebar(postoId) {
+  if(isVisited(postoId)) {
+    visitedPostos = visitedPostos.filter(function(id){ return id !== postoId; });
+    saveVisited();
+    showToast('↩ Visita desmarcada.');
+  } else {
+    visitedPostos.push(postoId);
+    saveVisited();
+    avancarProximoPosto();
+    showToast('✅ Posto marcado como visitado!');
+  }
+  renderSidebar();
+  if(typeof google !== 'undefined' && map) renderMarkers();
+  renderBarraProgresso();
 }
 
 // ================================================================
@@ -1873,11 +1934,21 @@ async function executarSugestaoIA(nome, cidade, tipo, endereco) {
   if(tipo) linhasNovo += '\nTipo: '+tipo;
   if(endereco) linhasNovo += '\nEndereço: '+endereco;
 
-  var prompt = 'Você é um sistema de sugestão de rotas para empresa de segurança patrimonial.\n\n'+
+  var rotasCarga = ROTAS.map(function(r){
+    return r.nome+': '+r.postos.length+' postos × 2 visitas/sem = '+(r.postos.length*2)+' visitas/sem | Dias: '+r.dias.join(', ');
+  }).join('\n');
+
+  var prompt = 'Você é um sistema de sugestão de rotas para supervisores de segurança patrimonial noturna.\n\n'+
+    'CONTEXTO DA OPERAÇÃO:\n'+
+    '- Escala dos supervisores: 12×36, horário noturno das 18:00 às 06:00\n'+
+    '- Cada posto deve receber 2 visitas por semana\n'+
+    '- As rotas são divididas por cidade e tipo de estabelecimento\n\n'+
     'Novo posto sendo cadastrado:\n'+linhasNovo+'\n\n'+
-    'Rotas existentes:\n'+rotasDesc+'\n\n'+
-    'Analise e responda SOMENTE com JSON neste formato exato (sem markdown, sem texto extra):\n'+
-    '{"rotaId":1,"motivo":"Explicação curta em até 2 frases de por que esta rota é ideal."}';
+    'Rotas existentes e carga atual:\n'+rotasCarga+'\n\n'+
+    'Detalhes das rotas:\n'+rotasDesc+'\n\n'+
+    'Critérios: 1) Cidade do posto deve coincidir com a rota geográfica. 2) Balancear o número de visitas semanais. 3) Tipo industrial/comercial prefere Beta ou Delta; residencial/condomínio prefere Alpha ou Gamma.\n\n'+
+    'Responda SOMENTE com JSON neste formato exato (sem markdown, sem texto extra):\n'+
+    '{"rotaId":1,"motivo":"Explicação curta em até 2 frases justificando a escolha com base na cidade, tipo e equilíbrio de carga (2 visitas/semana)."}';
 
   try {
     var resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1899,19 +1970,37 @@ async function executarSugestaoIA(nome, cidade, tipo, endereco) {
 }
 
 function sugerirRotaLocal(nome, cidade, tipo, endereco) {
-  var nomeLower = (nome+' '+endereco+' '+cidade).toLowerCase();
-  // Regra por cidade
-  if(cidade.toLowerCase().includes('mogi mirim')) return { rotaId:3, motivo:'Mogi Mirim faz parte da Rota Gamma, que cobre postos nessa cidade.' };
-  // Regra por tipo
-  if(tipo === 'Industrial' || nomeLower.match(/industri|logist|armazem|fabrica|empresa|ltda|sa|comercio/)) {
-    return { rotaId:2, motivo:'Postos industriais e comerciais são agrupados na Rota Beta, que opera terças e quintas.' };
+  var nomeLower = _normalizar(nome+' '+endereco+' '+cidade);
+  var cidadeLower = _normalizar(cidade);
+
+  // Mapa cidades → rota
+  var cidadeRota = {
+    'mogi mirim':3,
+    'valinhos':4,'jaguariuna':4,'amparo':4,'itapira':4,'conchal':4,'jundiai':4,'araras':4,'pinhal':4
+  };
+  for(var c in cidadeRota) {
+    if(cidadeLower.includes(c)) {
+      var r4 = ROTAS.find(function(x){ return x.id === cidadeRota[c]; });
+      var rNome = r4 ? r4.nome : 'Rota '+cidadeRota[c];
+      return { rotaId:cidadeRota[c], motivo:'Cidade "'+cidade+'" pertence à '+rNome+'. Escala noturna 12x36 (18h-6h), 2 visitas semanais.' };
+    }
   }
-  if(tipo === 'Residencial' || tipo === 'Condomínio' || nomeLower.match(/residencial|condomin|portal|jardim|reserva|clube|vila|parque/)) {
-    return { rotaId:1, motivo:'Condomínios e residenciais de Mogi Guaçu integram a Rota Alpha, operando segunda, quarta e sexta.' };
+
+  // Mogi Guaçu: por tipo
+  if(tipo === 'Industrial' || tipo === 'Comercial' ||
+     nomeLower.match(/industri|logist|armazem|fabrica|ltda|caminhao|autopec|distribuidora|cubatao|smc|lavapes|spasso|supermercado|posto.rvm|good.stop/)) {
+    return { rotaId:2, motivo:'Unidade comercial/industrial de Mogi Guacu -> Rota Beta (Ter/Qui). Escala 12x36 noturna, 2 visitas/semana.' };
   }
-  // Fallback: rota com menos postos
-  var menorRota = ROTAS.reduce(function(min, r){ return r.postos.length < min.postos.length ? r : min; }, ROTAS[0]);
-  return { rotaId:menorRota.id, motivo:'Sugerida a '+menorRota.nome+' por ter o menor número de postos, balanceando a carga.' };
+  if(tipo === 'Residencial' || tipo === 'Condomínio' ||
+     nomeLower.match(/residencial|condomin|portal|jardim|reserva|clube|vila|parque|fazenda|morro|veneto|borboletas|hadassas|zinias|oregon|miami/)) {
+    return { rotaId:1, motivo:'Condominio/residencial de Mogi Guacu -> Rota Alpha (Seg/Qua/Sex). Escala 12x36 noturna, 2 visitas/semana.' };
+  }
+
+  // Fallback: menor carga considerando 2 visitas/semana
+  var menorCarga = ROTAS.reduce(function(min, r) {
+    return (r.postos.length * 2) < (min.postos.length * 2) ? r : min;
+  }, ROTAS[0]);
+  return { rotaId:menorCarga.id, motivo:'Sugerida '+menorCarga.nome+' para equilibrar carga. Com 2 visitas/semana por posto, esta rota tem menor volume.' };
 }
 
 function renderBotoesRota(acoes, rotaId) {
@@ -2576,20 +2665,44 @@ function showTab(tab, el) {
   document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
   if(el) el.classList.add('active');
   document.getElementById('panel-'+tab).classList.add('active');
+
   if(tab==='mapa') {
+    renderSidebar();
+    renderBarraProgresso();
     if(!window._mapLoaded && typeof google !== 'undefined' && google.maps) {
       window._mapLoaded = true;
       setTimeout(initMap, 100);
+    } else if(window._mapLoaded && map) {
+      setTimeout(function(){ google.maps.event.trigger(map,'resize'); centralizarMapa(); }, 100);
     }
   }
-  if(tab==='historico') renderHistorico();
-  if(tab==='banco') { renderBancoDados(); renderSupervisorAtivoSelect(); }
+  if(tab==='rotas') {
+    renderRotas();
+  }
+  if(tab==='postos') {
+    renderPostosList();
+    renderRotasSelect();
+    renderRotasLegenda();
+  }
+  if(tab==='ia') {
+    // Nada a renderizar — estado mantido pelo usuário
+  }
+  if(tab==='checklist') {
+    renderPostoSelect();
+  }
+  if(tab==='historico') {
+    renderHistorico();
+  }
+  if(tab==='banco') {
+    renderBancoDados();
+    renderSupervisorAtivoSelect();
+  }
 }
 
 function showTabByName(tab) {
   var tabs = document.querySelectorAll('.tab');
-  var map = { 'mapa':0,'rotas':1,'postos':2,'ia':3,'checklist':4,'historico':5,'banco':6 };
-  var idx = map[tab];
+  var tabMap = { 'mapa':0,'rotas':1,'postos':2,'ia':3,'checklist':4,'historico':5,'banco':6 };
+  var idx = tabMap[tab];
   if(idx !== undefined && tabs[idx]) showTab(tab, tabs[idx]);
 }
 
@@ -2603,6 +2716,7 @@ function reRenderAll() {
   renderPostosList();
   renderRotasLegenda();
   renderBarraProgresso();
+  renderHistorico();
   if(map) {
     renderMarkers();
     if(polylinesVisible) renderPolylines();
@@ -2881,7 +2995,7 @@ document.addEventListener('DOMContentLoaded', function(){
   // Firebase status: gerenciado por _watchFbColecoesInterval() (definido abaixo)
 
   // Versão para debug
-  console.log('[MS Rotas v6.0] Carregado com Firebase Firestore. geocodificar='+typeof geocodificar);
+  console.log('[MS Rotas v8.0] Carregado com Firebase Firestore + Abas Integradas. geocodificar='+typeof geocodificar);
 });
 </script>
 
