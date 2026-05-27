@@ -480,9 +480,10 @@
   </div>
   <div style="display:flex;align-items:center;gap:12px">
     <div class="header-date" id="headerDate"></div>
-    <div id="fbStatusBadge" style="display:flex;align-items:center;gap:5px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap">
-      <span id="fbDot" style="width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block"></span>
+    <div id="fbStatusBadge" onclick="abrirDiagnosticoFirebase()" style="display:flex;align-items:center;gap:5px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap;cursor:pointer;transition:all 0.2s" title="Clique para diagnóstico">
+      <span id="fbDot" style="width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block;transition:background 0.4s"></span>
       <span id="fbStatusText">Firebase...</span>
+      <span style="font-size:10px;opacity:0.6">🔍</span>
     </div>
   </div>
 </header>
@@ -2817,28 +2818,7 @@ document.addEventListener('DOMContentLoaded', function(){
   // Modal fecha com clique fora
   document.getElementById('rotaModal').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
 
-  // Firebase status badge updater
-  var _fbCheck = setInterval(function(){
-    var dot = document.getElementById('fbDot');
-    var txt = document.getElementById('fbStatusText');
-    if(!dot || !txt) return;
-    if(window._visitasDB !== undefined || window._colaboradoresDB !== undefined || window._supervisoresDB !== undefined) {
-      dot.style.background = 'var(--green)';
-      txt.textContent = '☁️ Firebase OK';
-      txt.style.color = 'var(--green)';
-      clearInterval(_fbCheck);
-    }
-  }, 1200);
-  setTimeout(function(){
-    var dot = document.getElementById('fbDot');
-    var txt = document.getElementById('fbStatusText');
-    if(dot && txt && txt.textContent !== '☁️ Firebase OK'){
-      dot.style.background = 'var(--red)';
-      txt.textContent = '⚠️ Sem conexão';
-      txt.style.color = 'var(--red)';
-    }
-    clearInterval(_fbCheck);
-  }, 8000);
+  // Status Firebase: gerenciado pelo bloco _watchFbColecoesInterval() abaixo
 
   // Versão para debug
   console.log('[MS Rotas v6.0] Carregado com Firebase Firestore. geocodificar='+typeof geocodificar);
@@ -2925,5 +2905,232 @@ function initGmapsKey() {
 }
 </script>
 <!-- Google Maps API: carregado dinamicamente via carregarGoogleMapsComChave() -->
+
+<!-- ===== MODAL DIAGNÓSTICO FIREBASE ===== -->
+<div id="fbDiagModal" class="modal-overlay" onclick="if(event.target===this)fecharDiagnosticoFirebase()">
+  <div class="modal" style="max-width:520px;border-top:3px solid var(--accent2)">
+    <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">🔍</span>
+        <div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700">Diagnóstico Firebase</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">Estado da conexão com o banco de dados</div>
+        </div>
+      </div>
+      <button onclick="fecharDiagnosticoFirebase()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1">✕</button>
+    </div>
+
+    <!-- Status geral -->
+    <div style="padding:16px 24px;border-bottom:1px solid var(--border)">
+      <div id="diagStatusGeral" style="display:flex;align-items:center;gap:12px;background:var(--surface2);border-radius:8px;padding:12px 16px">
+        <span id="diagIconGeral" style="font-size:28px">⏳</span>
+        <div>
+          <div id="diagTitleGeral" style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700">Verificando...</div>
+          <div id="diagSubGeral" style="font-size:12px;color:var(--muted);margin-top:2px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Checklist de coleções -->
+    <div style="padding:16px 24px;border-bottom:1px solid var(--border)">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Coleções Firebase</div>
+      <div id="diagColecoes" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+
+    <!-- Info técnica -->
+    <div style="padding:16px 24px;border-bottom:1px solid var(--border)">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Informações Técnicas</div>
+      <div id="diagTecnico" style="font-family:monospace;font-size:11px;color:var(--muted);background:var(--surface2);border-radius:6px;padding:10px 12px;line-height:1.8"></div>
+    </div>
+
+    <!-- Ações -->
+    <div style="padding:14px 24px;display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="atualizarDiagnostico()" class="btn btn-secondary" style="font-size:12px;padding:7px 14px">🔄 Atualizar</button>
+      <button onclick="fecharDiagnosticoFirebase()" class="btn btn-primary" style="font-size:12px;padding:7px 14px">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// FIREBASE STATUS REAL + DIAGNÓSTICO
+// ================================================================
+window._fbStatus = {
+  conectado: false,
+  colecoes: {
+    colaboradores: false,
+    supervisores: false,
+    visitas: false,
+    postos_custom: false
+  },
+  ultimaAtualizacao: null,
+  tentativas: 0
+};
+
+function _atualizarBadgeFB(conectado) {
+  var dot  = document.getElementById('fbDot');
+  var txt  = document.getElementById('fbStatusText');
+  var badge = document.getElementById('fbStatusBadge');
+  if(!dot || !txt) return;
+
+  window._fbStatus.conectado = conectado;
+  window._fbStatus.ultimaAtualizacao = new Date();
+
+  if(conectado) {
+    dot.style.background = 'var(--green)';
+    dot.style.boxShadow  = '0 0 6px var(--green)';
+    txt.textContent      = '✅ Firebase OK';
+    txt.style.color      = 'var(--green)';
+    if(badge) badge.style.borderColor = 'rgba(16,185,129,0.4)';
+  } else {
+    dot.style.background = 'var(--red)';
+    dot.style.boxShadow  = '0 0 6px var(--red)';
+    txt.textContent      = '🔴 Offline';
+    txt.style.color      = 'var(--red)';
+    if(badge) badge.style.borderColor = 'rgba(239,68,68,0.4)';
+  }
+}
+
+// Observa quando qualquer coleção responde para marcar online
+(function _watchFbColecoesInterval() {
+  var _check = setInterval(function() {
+    var cols = window._fbStatus.colecoes;
+    cols.colaboradores = window._colaboradoresDB !== undefined;
+    cols.supervisores  = window._supervisoresDB  !== undefined;
+    cols.visitas       = window._visitasDB        !== undefined;
+    cols.postos_custom = window._postosCustomDB   !== undefined;
+
+    var alguma = cols.colaboradores || cols.supervisores || cols.visitas || cols.postos_custom;
+    var todas  = cols.colaboradores && cols.supervisores && cols.visitas && cols.postos_custom;
+
+    window._fbStatus.tentativas++;
+
+    if(todas) {
+      _atualizarBadgeFB(true);
+      clearInterval(_check);
+      clearTimeout(_timeout);
+    } else if(alguma && window._fbStatus.tentativas > 5) {
+      // Conexão parcial — ainda OK
+      _atualizarBadgeFB(true);
+      clearInterval(_check);
+      clearTimeout(_timeout);
+    }
+  }, 1000);
+
+  // Timeout definitivo: se em 10s nenhuma coleção respondeu → offline
+  var _timeout = setTimeout(function() {
+    clearInterval(_check);
+    var cols = window._fbStatus.colecoes;
+    cols.colaboradores = window._colaboradoresDB !== undefined;
+    cols.supervisores  = window._supervisoresDB  !== undefined;
+    cols.visitas       = window._visitasDB        !== undefined;
+    cols.postos_custom = window._postosCustomDB   !== undefined;
+    var alguma = cols.colaboradores || cols.supervisores || cols.visitas || cols.postos_custom;
+    if(!alguma) {
+      _atualizarBadgeFB(false);
+    } else {
+      _atualizarBadgeFB(true);
+    }
+  }, 10000);
+
+  // Monitoramento contínuo após conexão (detecta desconexão posterior)
+  setInterval(function() {
+    // Se estava conectado, checa se navigator ainda está online
+    if(window._fbStatus.conectado && !navigator.onLine) {
+      _atualizarBadgeFB(false);
+    }
+  }, 5000);
+
+  window.addEventListener('online',  function(){ _atualizarBadgeFB(true); });
+  window.addEventListener('offline', function(){ _atualizarBadgeFB(false); });
+})();
+
+// ── Modal de Diagnóstico ──
+function abrirDiagnosticoFirebase() {
+  var modal = document.getElementById('fbDiagModal');
+  if(modal) { modal.style.display = 'flex'; atualizarDiagnostico(); }
+}
+
+function fecharDiagnosticoFirebase() {
+  var modal = document.getElementById('fbDiagModal');
+  if(modal) modal.style.display = 'none';
+}
+
+function atualizarDiagnostico() {
+  // Atualiza estado das coleções
+  var cols = window._fbStatus.colecoes;
+  cols.colaboradores = window._colaboradoresDB !== undefined;
+  cols.supervisores  = window._supervisoresDB  !== undefined;
+  cols.visitas       = window._visitasDB        !== undefined;
+  cols.postos_custom = window._postosCustomDB   !== undefined;
+
+  var todas  = cols.colaboradores && cols.supervisores && cols.visitas && cols.postos_custom;
+  var alguma = cols.colaboradores || cols.supervisores || cols.visitas || cols.postos_custom;
+  var online = navigator.onLine;
+
+  // Status geral
+  var icon  = document.getElementById('diagIconGeral');
+  var title = document.getElementById('diagTitleGeral');
+  var sub   = document.getElementById('diagSubGeral');
+
+  if(todas && online) {
+    icon.textContent  = '✅';
+    title.textContent = 'Conectado ao Firebase';
+    title.style.color = 'var(--green)';
+    sub.textContent   = 'Todas as coleções estão respondendo normalmente.';
+  } else if(alguma && online) {
+    icon.textContent  = '⚠️';
+    title.textContent = 'Conexão Parcial';
+    title.style.color = 'var(--accent)';
+    sub.textContent   = 'Algumas coleções ainda não responderam.';
+  } else if(!online) {
+    icon.textContent  = '🔴';
+    title.textContent = 'Sem Internet';
+    title.style.color = 'var(--red)';
+    sub.textContent   = 'Dispositivo está offline. Verifique sua conexão.';
+  } else {
+    icon.textContent  = '🔴';
+    title.textContent = 'Firebase Desconectado';
+    title.style.color = 'var(--red)';
+    sub.textContent   = 'Não foi possível conectar ao banco de dados.';
+  }
+
+  // Coleções
+  var colsDiv = document.getElementById('diagColecoes');
+  var colsList = [
+    { key:'colaboradores', label:'Colaboradores',    icon:'👥' },
+    { key:'supervisores',  label:'Supervisores',     icon:'🎖️' },
+    { key:'visitas',       label:'Visitas/Histórico',icon:'📋' },
+    { key:'postos_custom', label:'Postos Custom',    icon:'📍' }
+  ];
+  colsDiv.innerHTML = colsList.map(function(c) {
+    var ok    = cols[c.key];
+    var count = ok ? (
+      c.key === 'colaboradores' ? (window._colaboradoresDB||[]).length :
+      c.key === 'supervisores'  ? (window._supervisoresDB||[]).length  :
+      c.key === 'visitas'       ? (window._visitasDB||[]).length       :
+      (window._postosCustomDB||[]).length
+    ) : 0;
+    return '<div style="display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:7px;padding:8px 12px;border:1px solid '+(ok?'rgba(16,185,129,0.25)':'rgba(239,68,68,0.2)')+'">'+
+      '<span style="font-size:16px">'+c.icon+'</span>'+
+      '<span style="flex:1;font-size:13px;font-weight:500">'+c.label+'</span>'+
+      (ok
+        ? '<span style="font-size:11px;color:var(--muted)">'+count+' registros</span><span style="color:var(--green);font-size:15px;margin-left:6px">✅</span>'
+        : '<span style="color:var(--red);font-size:13px;font-weight:600">Sem dados</span><span style="color:var(--red);font-size:15px;margin-left:6px">✗</span>'
+      )+'</div>';
+  }).join('');
+
+  // Info técnica
+  var agora = new Date();
+  var ultima = window._fbStatus.ultimaAtualizacao;
+  document.getElementById('diagTecnico').innerHTML =
+    'Projeto: <span style="color:var(--text)">rota-do-supervisor</span><br>'+
+    'SDK: <span style="color:var(--text)">Firebase 10.12.2 (Firestore)</span><br>'+
+    'Internet: <span style="color:'+(online?'var(--green)':'var(--red)')+'">'+( online?'Online':'Offline')+'</span><br>'+
+    'Última checagem: <span style="color:var(--text)">'+agora.toLocaleTimeString('pt-BR')+'</span><br>'+
+    'Tentativas: <span style="color:var(--text)">'+window._fbStatus.tentativas+'</span><br>'+
+    'window._db: <span style="color:'+(window._db?'var(--green)':'var(--red)')+'">'+( window._db?'instanciado':'não disponível')+'</span>';
+}
+</script>
 </body>
 </html>
