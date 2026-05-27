@@ -48,14 +48,47 @@
   .panel.active { display:block; }
   .container { max-width:1400px;margin:0 auto;padding:24px; }
 
-  /* MAP */
-  .map-layout { display:grid;grid-template-columns:320px 1fr;gap:20px;height:calc(100vh - 120px); }
-  @media(max-width:900px){ .map-layout{grid-template-columns:1fr;height:auto;} }
-  .sidebar { background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow-y:auto;display:flex;flex-direction:column; }
-  .sidebar-header { padding:16px;border-bottom:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:0.5px;color:var(--accent);display:flex;align-items:center;justify-content:space-between; }
-  .sidebar-filters { padding:10px 16px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap; }
-  .filter-btn { padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid;transition:all 0.15s;background:none;font-family:'Barlow',sans-serif; }
+  /* MAP — FULLSCREEN */
+  #panel-mapa { position:relative; }
+  #panel-mapa.active { display:block; }
+  .map-fullscreen-wrap { position:fixed; top:108px; left:0; right:0; bottom:0; z-index:10; }
+  /* espaço reservado para o panel não colapsar */
+  .map-placeholder { height:calc(100vh - 108px); }
+
+  /* sidebar flutuante */
+  .sidebar { position:absolute; top:10px; left:10px; bottom:10px; width:300px; z-index:20;
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    overflow-y:auto;display:flex;flex-direction:column;
+    box-shadow:0 4px 24px rgba(0,0,0,0.5); }
+  .sidebar-header { padding:12px 14px;border-bottom:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:0.5px;color:var(--accent);display:flex;align-items:center;justify-content:space-between; }
+  .sidebar-filters { padding:8px 14px;border-bottom:1px solid var(--border);display:flex;gap:5px;flex-wrap:wrap; }
+  .filter-btn { padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid;transition:all 0.15s;background:none;font-family:'Barlow',sans-serif; }
   .filter-btn.active { color:#000!important; }
+
+  /* controles flutuantes no topo */
+  .map-controls-float { position:absolute; top:10px; left:320px; right:10px; z-index:20;
+    display:flex; gap:6px; flex-wrap:wrap; align-items:center;
+    background:rgba(10,14,26,0.82); backdrop-filter:blur(6px);
+    border:1px solid var(--border); border-radius:10px; padding:8px 12px; }
+
+  /* barra de progresso + botões rotas flutuante */
+  .map-progress-float { position:absolute; bottom:14px; left:320px; right:10px; z-index:20;
+    display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+    background:rgba(10,14,26,0.82); backdrop-filter:blur(6px);
+    border:1px solid var(--border); border-radius:10px; padding:8px 12px; }
+
+  /* barra API key flutuante */
+  .map-apikey-float { position:absolute; top:56px; left:320px; right:10px; z-index:20; }
+
+  #map { width:100%; height:100%; border-radius:0; border:none; }
+
+  @media(max-width:900px){
+    .sidebar { position:absolute; top:auto; bottom:0; left:0; right:0; width:100%; height:45vh; border-radius:10px 10px 0 0; }
+    .map-controls-float { left:10px; top:10px; right:10px; }
+    .map-progress-float { left:10px; bottom:46vh; right:10px; }
+    .map-apikey-float { left:10px; top:56px; right:10px; }
+    .map-fullscreen-wrap { top:108px; }
+  }
 
   .posto-item { padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;display:flex;align-items:center;gap:10px; }
   .posto-item:hover { background:var(--surface2); }
@@ -73,10 +106,10 @@
   .btn-visitar.feito { background:rgba(16,185,129,0.2);color:#10b981;border:1px solid rgba(16,185,129,0.4); }
   .btn-visitar.feito:hover { background:rgba(239,68,68,0.15);color:#ef4444;border-color:rgba(239,68,68,0.4); }
 
-  #map { border-radius:10px;border:1px solid var(--border);width:100%;height:100%;min-height:500px; }
+  #map { width:100%;height:100%;min-height:100%; }
 
   /* MAP CONTROLS */
-  .map-controls { display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px; }
+  .map-controls { display:flex;gap:8px;flex-wrap:wrap; }
   .map-ctrl-btn { padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;font-family:'Barlow Condensed',sans-serif;font-weight:600;cursor:pointer;transition:all 0.15s;letter-spacing:0.3px; }
   .map-ctrl-btn:hover { background:var(--surface2); }
   .map-ctrl-btn.active { border-color:currentColor; }
@@ -537,43 +570,13 @@
 
 <!-- ===== MAPA ===== -->
 <div id="panel-mapa" class="panel active">
-  <div class="container" style="padding-top:16px">
+  <div class="map-placeholder">
+    <div class="map-fullscreen-wrap">
 
-    <!-- Barra de configuração da chave Google Maps -->
-    <div id="gmapsKeyBar" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <span style="font-size:18px">🗺️</span>
-      <span style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap">Google Maps API Key</span>
-      <input id="gmapsKeyInput" type="password" placeholder="Cole sua chave aqui: AIzaSy..." 
-        style="flex:1;min-width:220px;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;transition:border-color 0.15s"
-        onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
-        onkeydown="if(event.key==='Enter')carregarGoogleMapsComChave()" />
-      <button onclick="toggleGmapsKeyVis()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:7px 10px;border-radius:6px;cursor:pointer;font-size:13px" title="Mostrar/ocultar">👁</button>
-      <button onclick="carregarGoogleMapsComChave()" style="background:var(--accent);border:none;color:#000;padding:7px 16px;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">▶ Carregar Mapa</button>
-      <span id="gmapsKeyStatus" style="font-size:12px;color:var(--muted)"></span>
-      <a href="https://developers.google.com/maps/documentation/javascript/get-api-key" target="_blank" style="font-size:11px;color:var(--accent);text-decoration:none;white-space:nowrap">Como obter →</a>
-    </div>
+      <!-- Mapa ocupa 100% do espaço -->
+      <div id="map"></div>
 
-    <div class="map-controls">
-      <button class="map-ctrl-btn" onclick="filtrarMapaRota(0)" id="mapBtnTodos" style="border-color:var(--accent);color:var(--accent)">● Todos</button>
-      <button class="map-ctrl-btn" onclick="filtrarMapaRota(1)" id="mapBtn1" style="color:#3b82f6">● Alpha</button>
-      <button class="map-ctrl-btn" onclick="filtrarMapaRota(2)" id="mapBtn2" style="color:#10b981">● Beta</button>
-      <button class="map-ctrl-btn" onclick="filtrarMapaRota(3)" id="mapBtn3" style="color:#f59e0b">● Gamma</button>
-      <button class="map-ctrl-btn" onclick="filtrarMapaRota(4)" id="mapBtn4" style="color:#8b5cf6">● Delta</button>
-      <button class="map-ctrl-btn" onclick="togglePolylines()" id="btnPolylines">〰 Mostrar Rotas</button>
-      <button class="map-ctrl-btn" onclick="centralizarMapa()" style="margin-left:auto">⌖ Centralizar</button>
-    </div>
-
-    <!-- Barra de progresso do dia + botões iniciar rota -->
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
-      <div id="barraProgresso" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 14px"></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button onclick="abrirRotaMaps(1)" style="background:#3b82f6;border:none;color:#fff;padding:7px 14px;border-radius:7px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🚗 Alpha</button>
-        <button onclick="abrirRotaMaps(2)" style="background:#10b981;border:none;color:#fff;padding:7px 14px;border-radius:7px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🚗 Beta</button>
-        <button onclick="abrirRotaMaps(3)" style="background:#f59e0b;border:none;color:#000;padding:7px 14px;border-radius:7px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🚗 Gamma</button>
-        <button onclick="abrirRotaMaps(4)" style="background:#8b5cf6;border:none;color:#fff;padding:7px 14px;border-radius:7px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🚗 Delta</button>
-      </div>
-    </div>
-    <div class="map-layout" style="height:calc(100vh - 175px)">
+      <!-- Sidebar flutuante (lista de postos) -->
       <div class="sidebar">
         <div class="sidebar-header">
           <span id="sidebarCount">📍 — Postos</span>
@@ -587,7 +590,43 @@
         </div>
         <div id="postosList"></div>
       </div>
-      <div id="map"></div>
+
+      <!-- Controles flutuantes (topo) -->
+      <div class="map-controls-float">
+        <button class="map-ctrl-btn" onclick="filtrarMapaRota(0)" id="mapBtnTodos" style="border-color:var(--accent);color:var(--accent)">● Todos</button>
+        <button class="map-ctrl-btn" onclick="filtrarMapaRota(1)" id="mapBtn1" style="color:#3b82f6">● Alpha</button>
+        <button class="map-ctrl-btn" onclick="filtrarMapaRota(2)" id="mapBtn2" style="color:#10b981">● Beta</button>
+        <button class="map-ctrl-btn" onclick="filtrarMapaRota(3)" id="mapBtn3" style="color:#f59e0b">● Gamma</button>
+        <button class="map-ctrl-btn" onclick="filtrarMapaRota(4)" id="mapBtn4" style="color:#8b5cf6">● Delta</button>
+        <button class="map-ctrl-btn" onclick="togglePolylines()" id="btnPolylines">〰 Rotas</button>
+        <button class="map-ctrl-btn" onclick="centralizarMapa()" style="margin-left:auto">⌖ Centralizar</button>
+        <button class="map-ctrl-btn" onclick="toggleModoLimpo()" id="btnModoLimpo" title="Ocultar/mostrar controles" style="border-color:var(--muted);color:var(--muted)">⛶ Tela Limpa</button>
+      </div>
+
+      <!-- API Key flutuante (oculta após carregar) -->
+      <div class="map-apikey-float">
+        <div id="gmapsKeyBar" style="background:rgba(17,24,39,0.92);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:16px">🗺️</span>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap">Maps API Key</span>
+          <input id="gmapsKeyInput" type="password" placeholder="Cole sua chave: AIzaSy..."
+            style="flex:1;min-width:180px;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-family:'Barlow',sans-serif;font-size:12px"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
+            onkeydown="if(event.key==='Enter')carregarGoogleMapsComChave()" />
+          <button onclick="toggleGmapsKeyVis()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:6px 9px;border-radius:6px;cursor:pointer;font-size:12px" title="Mostrar/ocultar">👁</button>
+          <button onclick="carregarGoogleMapsComChave()" style="background:var(--accent);border:none;color:#000;padding:6px 14px;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">▶ Carregar</button>
+          <span id="gmapsKeyStatus" style="font-size:11px;color:var(--muted)"></span>
+        </div>
+      </div>
+
+      <!-- Barra progresso + botões rotas (rodapé flutuante) -->
+      <div class="map-progress-float">
+        <div id="barraProgresso" style="flex:1;font-size:12px"></div>
+        <button onclick="abrirRotaMaps(1)" style="background:#3b82f6;border:none;color:#fff;padding:6px 12px;border-radius:7px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🚗 Alpha</button>
+        <button onclick="abrirRotaMaps(2)" style="background:#10b981;border:none;color:#fff;padding:6px 12px;border-radius:7px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🚗 Beta</button>
+        <button onclick="abrirRotaMaps(3)" style="background:#f59e0b;border:none;color:#000;padding:6px 12px;border-radius:7px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🚗 Gamma</button>
+        <button onclick="abrirRotaMaps(4)" style="background:#8b5cf6;border:none;color:#fff;padding:6px 12px;border-radius:7px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🚗 Delta</button>
+      </div>
+
     </div>
   </div>
 </div>
@@ -1017,7 +1056,7 @@ var POSTOS_BASE = [
   { id:30, nome:"Spasso Sabores Jaguariúna (Sta. Cruz)", cidade:"Jaguariúna", lat:-22.709200, lng:-46.997100, rota:4, tipo:"Comercial",   endereco:"R. Tomaz Jasso, 518 - Santa Cruz de Cima" },
   { id:31, nome:"Spasso Sabores Amparo",            cidade:"Amparo",      lat:-22.699200, lng:-46.740800, rota:4, tipo:"Comercial",   endereco:"Av. Dr. Carlos Burgos, 3200 - Lot. Nardini" },
   { id:32, nome:"Spasso Sabores Mogi Mirim (Padre Roque)", cidade:"Mogi Mirim", lat:-22.437500, lng:-46.966800, rota:3, tipo:"Comercial",   endereco:"R. Padre Roque - Jardim Áurea" },
-  { id:33, nome:"Spasso Sabores Itapira",           cidade:"Itapira",     lat:-22.441200, lng:-46.944800, rota:4, tipo:"Comercial",   endereco:"Av. Getúlio Vargas, 1420 - Vila Santa Marta" },
+  { id:33, nome:"Spasso Sabores Itapira",           cidade:"Itapira",     lat:-22.436800, lng:-46.818500, rota:4, tipo:"Comercial",   endereco:"Av. Getúlio Vargas, 1420 - Vila Santa Marta" },
   { id:34, nome:"Lavapés Tucura Mogi Mirim",        cidade:"Mogi Mirim",  lat:-22.426100, lng:-46.958700, rota:3, tipo:"Comercial",   endereco:"Praça Catharino Marangoni, 1125 - Tucura" },
   { id:35, nome:"SMC Conchal",                      cidade:"Conchal",     lat:-22.329200, lng:-47.172800, rota:4, tipo:"Comercial",   endereco:"Conchal - SP" },
   { id:36, nome:"SMC Mogi Guaçu (Av. Trabalhadores)", cidade:"Mogi Guaçu", lat:-22.352800, lng:-46.944200, rota:2, tipo:"Comercial",   endereco:"Av. dos Trabalhadores - Bairro do Lote" },
@@ -1032,6 +1071,9 @@ var ROTAS = [
 ];
 
 // ================================================================
+// BASE DE OPERAÇÕES — Clube Oregon (ponto de início/fim das rotas)
+var BASE_SUPERVISAO = { id:12, nome:"Residencial Clube Oregon", cidade:"Mogi Guaçu", lat:-22.364873, lng:-46.956757, endereco:"Clube Oregon — Base dos Supervisores" };
+
 // POSTOS DINÂMICOS (base + custom localStorage)
 // ================================================================
 var POSTOS_CUSTOM = [];
@@ -1085,7 +1127,7 @@ function initMap() {
   try {
     if(typeof google === 'undefined' || !google.maps){ mapError(); return; }
     map = new google.maps.Map(document.getElementById('map'), {
-      center: { lat:-22.38, lng:-46.96 }, zoom:12,
+      center: { lat: BASE_SUPERVISAO.lat, lng: BASE_SUPERVISAO.lng }, zoom:12,
       mapTypeControl: false,
       streetViewControl: false,
       fullscreenControl: true,
@@ -1106,8 +1148,31 @@ function initMap() {
     });
     directionsRenderer.setMap(map);
     renderMarkers();
+    renderMarkers();
     renderBarraProgresso();
+    adicionarMarcadorBase();
   } catch(e){ mapError(); }
+}
+
+// ── Marcador especial da Base (Clube Oregon) ──
+function adicionarMarcadorBase() {
+  if(!map || typeof google === 'undefined') return;
+  var svgBase = '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="56" viewBox="0 0 48 56">' +
+    '<polygon points="24,54 4,36 4,16 24,4 44,16 44,36" fill="#f59e0b" stroke="#fff" stroke-width="2"/>' +
+    '<text x="24" y="22" text-anchor="middle" font-size="9" font-weight="800" fill="#000" font-family="Arial">BASE</text>' +
+    '<text x="24" y="36" text-anchor="middle" font-size="8" font-weight="700" fill="#000" font-family="Arial">Oregon</text>' +
+    '</svg>';
+  new google.maps.Marker({
+    position: { lat: BASE_SUPERVISAO.lat, lng: BASE_SUPERVISAO.lng },
+    map: map,
+    title: '🏠 Base — ' + BASE_SUPERVISAO.nome,
+    icon: {
+      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgBase),
+      scaledSize: new google.maps.Size(48, 56),
+      anchor: new google.maps.Point(24, 56)
+    },
+    zIndex: 9999
+  });
 }
 
 // ── Cria SVG de bolinha estilo entrega ──
@@ -1508,7 +1573,36 @@ function filtrarMapaRota(rotaId) {
 }
 
 function centralizarMapa() {
-  if(map) { map.setCenter({ lat:-22.38, lng:-46.96 }); map.setZoom(12); }
+  if(map) { map.setCenter({ lat: BASE_SUPERVISAO.lat, lng: BASE_SUPERVISAO.lng }); map.setZoom(12); }
+}
+
+var _modoLimpo = false;
+function toggleModoLimpo() {
+  _modoLimpo = !_modoLimpo;
+  var sidebar   = document.querySelector('.sidebar');
+  var ctrlFloat = document.querySelector('.map-controls-float');
+  var progress  = document.querySelector('.map-progress-float');
+  var apikey    = document.querySelector('.map-apikey-float');
+  var btn       = document.getElementById('btnModoLimpo');
+
+  if(_modoLimpo) {
+    [sidebar, ctrlFloat, progress, apikey].forEach(function(el){ if(el) el.style.display='none'; });
+    // Botão de restaurar fica fixo no canto
+    var restore = document.createElement('button');
+    restore.id = 'btnRestoreControls';
+    restore.textContent = '☰';
+    restore.title = 'Mostrar controles';
+    restore.style.cssText = 'position:absolute;top:10px;right:10px;z-index:30;background:rgba(10,14,26,0.75);backdrop-filter:blur(4px);border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:8px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;';
+    restore.onclick = toggleModoLimpo;
+    var wrap = document.querySelector('.map-fullscreen-wrap');
+    if(wrap) wrap.appendChild(restore);
+    if(map) setTimeout(function(){ google.maps.event.trigger(map,'resize'); }, 100);
+  } else {
+    [sidebar, ctrlFloat, progress, apikey].forEach(function(el){ if(el) el.style.display=''; });
+    var restore = document.getElementById('btnRestoreControls');
+    if(restore) restore.remove();
+    if(map) setTimeout(function(){ google.maps.event.trigger(map,'resize'); }, 100);
+  }
 }
 
 function centerPosto(id) {
@@ -1631,7 +1725,8 @@ function abrirRotaMaps(rotaId) {
   window._modalRotaId = rotaId;
   document.getElementById('rotaModalTitle').textContent = rota.nome + ' — '+postos.length+' postos';
   var visitados = postos.filter(function(p){ return isVisited(p.id); }).length;
-  var html = '<p style="font-size:13px;color:var(--muted);margin-bottom:14px">Paradas na ordem otimizada de visita:</p><ol style="padding-left:18px">';
+  var html = '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.4);border-radius:7px;margin-bottom:10px;font-size:12px;font-weight:600;color:var(--accent)">🏠 Partida: Clube Oregon (Base)</div>';
+  html += '<p style="font-size:13px;color:var(--muted);margin-bottom:14px">Paradas na ordem otimizada de visita:</p><ol style="padding-left:18px">';
   var ordenados = nearestNeighborAlgo(postos);
   ordenados.forEach(function(p){
     var ok = isVisited(p.id);
@@ -1641,6 +1736,7 @@ function abrirRotaMaps(rotaId) {
     '</li>';
   });
   html += '</ol>';
+  html += '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.4);border-radius:7px;margin-top:10px;font-size:12px;font-weight:600;color:var(--accent)">🏠 Retorno: Clube Oregon (Base)</div>';
   html += '<div style="margin-top:12px;padding:10px 12px;background:var(--surface2);border-radius:7px;font-size:12px;color:var(--muted)">'+
     '✅ '+visitados+' de '+postos.length+' postos visitados hoje</div>';
   document.getElementById('rotaModalContent').innerHTML = html;
@@ -1649,17 +1745,22 @@ function abrirRotaMaps(rotaId) {
 
 function _buildMapsUrl(postos) {
   if(!postos || postos.length < 1) return null;
+  // Rota sempre parte da Base (Clube Oregon) e retorna à Base
+  var base = BASE_SUPERVISAO;
   if(postos.length === 1) {
-    return 'https://www.google.com/maps/search/?api=1&query='+postos[0].lat+','+postos[0].lng;
+    return 'https://www.google.com/maps/dir/?api=1' +
+      '&origin='+base.lat+','+base.lng +
+      '&destination='+base.lat+','+base.lng +
+      '&waypoints='+encodeURIComponent(postos[0].lat+','+postos[0].lng) +
+      '&travelmode=driving';
   }
-  var origem  = postos[0];
-  var destino = postos[postos.length-1];
-  var middle  = postos.slice(1,-1).slice(0,8);
+  // Paradas intermediárias (máx 8 waypoints no Maps)
+  var middle = postos.slice(0, Math.min(postos.length, 9));
   var wp = middle.map(function(p){ return p.lat+','+p.lng; }).join('|');
   return 'https://www.google.com/maps/dir/?api=1' +
-    '&origin='+origem.lat+','+origem.lng +
-    '&destination='+destino.lat+','+destino.lng +
-    (wp ? '&waypoints='+encodeURIComponent(wp) : '') +
+    '&origin='+base.lat+','+base.lng +
+    '&destination='+base.lat+','+base.lng +
+    '&waypoints='+encodeURIComponent(wp) +
     '&travelmode=driving';
 }
 
@@ -2721,7 +2822,7 @@ function showTab(tab, el) {
       window._mapLoaded = true;
       setTimeout(initMap, 100);
     } else if(window._mapLoaded && map) {
-      setTimeout(function(){ google.maps.event.trigger(map,'resize'); centralizarMapa(); }, 100);
+      setTimeout(function(){ google.maps.event.trigger(map,'resize'); }, 150);
     }
   }
   if(tab==='rotas') {
