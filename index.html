@@ -480,9 +480,10 @@
   </div>
   <div style="display:flex;align-items:center;gap:12px">
     <div class="header-date" id="headerDate"></div>
-    <div id="fbStatusBadge" onclick="abrirDiagnosticoFirebase()" style="display:flex;align-items:center;gap:5px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap;cursor:pointer;user-select:none" title="Ver diagnóstico Firebase">
+    <div id="fbStatusBadge" onclick="abrirDiagnosticoFirebase()" style="display:flex;align-items:center;gap:5px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap;cursor:pointer;user-select:none" title="Ver diagnóstico">
       <span id="fbDot" style="width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block;transition:background 0.4s"></span>
-      <span id="fbStatusText">Firebase...</span><span style="font-size:10px;opacity:0.55;margin-left:2px">🔍</span>
+      <span id="fbStatusText">Firebase...</span>
+      <span style="font-size:10px;opacity:0.5;margin-left:1px">🔍</span>
     </div>
   </div>
 </header>
@@ -2628,6 +2629,19 @@ function removerColab(id, nome) {
   }
 }
 
+// Wrappers para botões gerados dinamicamente (data-attribute approach)
+function removerColabById(btn) {
+  var id   = btn.getAttribute('data-id');
+  var nome = decodeURIComponent(btn.getAttribute('data-nome'));
+  removerColab(id, nome);
+}
+function removerSupervById(btn) {
+  var id   = btn.getAttribute('data-id');
+  var nome = decodeURIComponent(btn.getAttribute('data-nome'));
+  removerSuperv(id, nome);
+}
+
+
 function adicionarSuperv() {
   var nome = document.getElementById('novoSupervNome').value.trim();
   if(!nome){ showToast('⚠️ Informe o nome do supervisor','error'); return; }
@@ -2730,7 +2744,7 @@ function renderBancoDados() {
         return '<div class="db-item">'+
           '<div class="db-item-icon" style="background:rgba(59,130,246,0.15);color:#3b82f6">👷</div>'+
           '<div class="db-item-name">'+c.nome+'<br><span style="font-size:11px;color:var(--muted)">'+c.cargo+'</span></div>'+
-          '<button onclick="removerColab(''+fid.replace(/'/g,"\'")+'',''+c.nome.replace(/'/g,"\'")+'')" class="btn-delete-posto">✕</button>'+
+          '<button onclick="removerColabById(this)" data-id="'+fid+'" data-nome="'+encodeURIComponent(c.nome)+'" class="btn-delete-posto">✕</button>'+
         '</div>';
       }).join('');
     }
@@ -2748,7 +2762,7 @@ function renderBancoDados() {
         return '<div class="db-item">'+
           '<div class="db-item-icon" style="background:rgba(245,158,11,0.15);color:var(--accent)">🎖️</div>'+
           '<div class="db-item-name">'+nome+'</div>'+
-          '<button onclick="removerSuperv(''+fid.replace(/'/g,"\'")+'',''+nome.replace(/'/g,"\'")+'')" class="btn-delete-posto">✕</button>'+
+          '<button onclick="removerSupervById(this)" data-id="'+fid+'" data-nome="'+encodeURIComponent(nome)+'" class="btn-delete-posto">✕</button>'+
         '</div>';
       }).join('');
     }
@@ -2822,146 +2836,6 @@ document.addEventListener('DOMContentLoaded', function(){
   // Versão para debug
   console.log('[MS Rotas v6.0] Carregado com Firebase Firestore. geocodificar='+typeof geocodificar);
 });
-</script>
-
-<!-- ===== MODAL DIAGNÓSTICO FIREBASE ===== -->
-<div id="fbDiagModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;padding:20px">
-  <div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent2);border-radius:12px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;animation:fadeIn 0.2s ease">
-    <div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-      <div style="display:flex;align-items:center;gap:10px">
-        <span style="font-size:22px">🔍</span>
-        <div>
-          <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700">Diagnóstico Firebase</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:1px">Estado da conexão com o banco de dados</div>
-        </div>
-      </div>
-      <button onclick="fecharDiagnosticoFirebase()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;padding:0 4px">✕</button>
-    </div>
-    <div style="padding:14px 22px;border-bottom:1px solid var(--border)">
-      <div id="diagStatusGeral" style="display:flex;align-items:center;gap:12px;background:var(--surface2);border-radius:8px;padding:12px 16px">
-        <span id="diagIconGeral" style="font-size:28px">⏳</span>
-        <div>
-          <div id="diagTitleGeral" style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700">Verificando...</div>
-          <div id="diagSubGeral" style="font-size:12px;color:var(--muted);margin-top:2px"></div>
-        </div>
-      </div>
-    </div>
-    <div style="padding:14px 22px;border-bottom:1px solid var(--border)">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Coleções Firebase</div>
-      <div id="diagColecoes" style="display:flex;flex-direction:column;gap:6px"></div>
-    </div>
-    <div style="padding:14px 22px;border-bottom:1px solid var(--border)">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Informações Técnicas</div>
-      <div id="diagTecnico" style="font-family:monospace;font-size:11px;color:var(--muted);background:var(--surface2);border-radius:6px;padding:10px 12px;line-height:1.9"></div>
-    </div>
-    <div style="padding:12px 22px;display:flex;gap:8px;justify-content:flex-end">
-      <button onclick="atualizarDiagnostico()" class="btn btn-secondary" style="font-size:12px;padding:7px 16px">🔄 Atualizar</button>
-      <button onclick="fecharDiagnosticoFirebase()" class="btn btn-primary" style="font-size:12px;padding:7px 16px">Fechar</button>
-    </div>
-  </div>
-</div>
-
-<script>
-// ================================================================
-// FIREBASE STATUS MELHORADO + MODAL DIAGNÓSTICO
-// ================================================================
-window._fbStatus = { conectado: false, tentativas: 0, colecoes: { colaboradores:false, supervisores:false, visitas:false, postos_custom:false } };
-
-function _atualizarBadgeFB(on) {
-  var dot = document.getElementById('fbDot');
-  var txt = document.getElementById('fbStatusText');
-  var bdg = document.getElementById('fbStatusBadge');
-  if(!dot||!txt) return;
-  window._fbStatus.conectado = on;
-  if(on) {
-    dot.style.background='var(--green)'; dot.style.boxShadow='0 0 5px var(--green)';
-    txt.textContent='✅ Firebase OK'; txt.style.color='var(--green)';
-    if(bdg) bdg.style.borderColor='rgba(16,185,129,0.4)';
-  } else {
-    dot.style.background='var(--red)'; dot.style.boxShadow='0 0 5px var(--red)';
-    txt.textContent='🔴 Offline'; txt.style.color='var(--red)';
-    if(bdg) bdg.style.borderColor='rgba(239,68,68,0.4)';
-  }
-}
-
-(function _watchFbColecoesInterval() {
-  var chk = setInterval(function() {
-    var c = window._fbStatus.colecoes;
-    c.colaboradores = window._colaboradoresDB !== undefined;
-    c.supervisores  = window._supervisoresDB  !== undefined;
-    c.visitas       = window._visitasDB        !== undefined;
-    c.postos_custom = window._postosCustomDB   !== undefined;
-    window._fbStatus.tentativas++;
-    var alguma = c.colaboradores||c.supervisores||c.visitas||c.postos_custom;
-    if(alguma) { _atualizarBadgeFB(true); clearInterval(chk); clearTimeout(tmo); }
-  }, 1000);
-  var tmo = setTimeout(function() {
-    clearInterval(chk);
-    var c = window._fbStatus.colecoes;
-    c.colaboradores = window._colaboradoresDB !== undefined;
-    c.supervisores  = window._supervisoresDB  !== undefined;
-    c.visitas       = window._visitasDB        !== undefined;
-    c.postos_custom = window._postosCustomDB   !== undefined;
-    _atualizarBadgeFB(c.colaboradores||c.supervisores||c.visitas||c.postos_custom);
-  }, 10000);
-  window.addEventListener('online',  function(){ _atualizarBadgeFB(true); });
-  window.addEventListener('offline', function(){ _atualizarBadgeFB(false); });
-})();
-
-function abrirDiagnosticoFirebase() {
-  var m = document.getElementById('fbDiagModal');
-  if(!m) return;
-  m.style.display = 'flex';
-  atualizarDiagnostico();
-}
-function fecharDiagnosticoFirebase() {
-  var m = document.getElementById('fbDiagModal');
-  if(m) m.style.display = 'none';
-}
-function atualizarDiagnostico() {
-  var c = window._fbStatus.colecoes;
-  c.colaboradores = window._colaboradoresDB !== undefined;
-  c.supervisores  = window._supervisoresDB  !== undefined;
-  c.visitas       = window._visitasDB        !== undefined;
-  c.postos_custom = window._postosCustomDB   !== undefined;
-  var online = navigator.onLine;
-  var todas = c.colaboradores && c.supervisores && c.visitas && c.postos_custom;
-  var alguma = c.colaboradores || c.supervisores || c.visitas || c.postos_custom;
-
-  var icon = document.getElementById('diagIconGeral');
-  var ttl  = document.getElementById('diagTitleGeral');
-  var sub  = document.getElementById('diagSubGeral');
-  if(!icon) return;
-
-  if(todas && online)       { icon.textContent='✅'; ttl.textContent='Conectado ao Firebase';   ttl.style.color='var(--green)'; sub.textContent='Todas as coleções respondendo normalmente.'; }
-  else if(alguma && online) { icon.textContent='⚠️'; ttl.textContent='Conexão Parcial';         ttl.style.color='var(--accent)'; sub.textContent='Algumas coleções ainda não responderam.'; }
-  else if(!online)          { icon.textContent='🔴'; ttl.textContent='Sem Internet';            ttl.style.color='var(--red)';   sub.textContent='Dispositivo offline. Verifique sua conexão.'; }
-  else                      { icon.textContent='🔴'; ttl.textContent='Firebase Desconectado';   ttl.style.color='var(--red)';   sub.textContent='Não foi possível conectar ao banco de dados.'; }
-
-  var list = [
-    { key:'colaboradores', label:'Colaboradores',     icon:'👥', cnt:(window._colaboradoresDB||[]).length },
-    { key:'supervisores',  label:'Supervisores',      icon:'🎖️', cnt:(window._supervisoresDB||[]).length },
-    { key:'visitas',       label:'Visitas/Histórico', icon:'📋', cnt:(window._visitasDB||[]).length },
-    { key:'postos_custom', label:'Postos Custom',     icon:'📍', cnt:(window._postosCustomDB||[]).length }
-  ];
-  document.getElementById('diagColecoes').innerHTML = list.map(function(x){
-    var ok = c[x.key];
-    return '<div style="display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:7px;padding:8px 12px;border:1px solid '+(ok?'rgba(16,185,129,0.25)':'rgba(239,68,68,0.2)')+'">'+
-      '<span style="font-size:15px">'+x.icon+'</span>'+
-      '<span style="flex:1;font-size:13px;font-weight:500">'+x.label+'</span>'+
-      (ok ? '<span style="font-size:11px;color:var(--muted)">'+x.cnt+' registros</span><span style="color:var(--green);font-size:14px;margin-left:6px">✅</span>'
-          : '<span style="color:var(--red);font-size:12px;font-weight:600">Sem dados</span><span style="color:var(--red);font-size:13px;margin-left:6px">✗</span>')+
-    '</div>';
-  }).join('');
-
-  document.getElementById('diagTecnico').innerHTML =
-    'Projeto: <span style="color:var(--text)">rota-do-supervisor</span>\n'+
-    'SDK: <span style="color:var(--text)">Firebase 10.12.2 Firestore</span>\n'+
-    'Internet: <span style="color:'+(online?'var(--green)':'var(--red)')+'">'+( online?'Online ✓':'Offline ✗')+'</span>\n'+
-    'Checagem: <span style="color:var(--text)">'+new Date().toLocaleTimeString('pt-BR')+'</span>\n'+
-    'Tentativas: <span style="color:var(--text)">'+window._fbStatus.tentativas+'</span>\n'+
-    'window._db: <span style="color:'+(window._db?'var(--green)':'var(--red)')+'">'+( window._db?'instanciado ✓':'não disponível')+'</span>';
-}
 </script>
 
 <!-- Google Maps API -->
@@ -3044,5 +2918,127 @@ function initGmapsKey() {
 }
 </script>
 <!-- Google Maps API: carregado dinamicamente via carregarGoogleMapsComChave() -->
+
+<!-- ===== MODAL DIAGNÓSTICO FIREBASE ===== -->
+<div id="fbDiagModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--surface);border:1px solid var(--border);border-top:3px solid var(--accent2);border-radius:12px;max-width:520px;width:100%;max-height:90vh;overflow-y:auto;animation:fadeIn 0.2s ease">
+    <div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">🔍</span>
+        <div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700">Diagnóstico Firebase</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:1px">Estado da conexão com o banco de dados</div>
+        </div>
+      </div>
+      <button onclick="fecharDiagnosticoFirebase()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;padding:0 4px">✕</button>
+    </div>
+    <div style="padding:14px 22px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:12px;background:var(--surface2);border-radius:8px;padding:12px 16px">
+        <span id="diagIconGeral" style="font-size:28px">⏳</span>
+        <div>
+          <div id="diagTitleGeral" style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700">Verificando...</div>
+          <div id="diagSubGeral" style="font-size:12px;color:var(--muted);margin-top:2px"></div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:14px 22px;border-bottom:1px solid var(--border)">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Coleções Firebase</div>
+      <div id="diagColecoes" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+    <div style="padding:14px 22px;border-bottom:1px solid var(--border)">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Informações Técnicas</div>
+      <div id="diagTecnico" style="font-family:monospace;font-size:11px;color:var(--muted);background:var(--surface2);border-radius:6px;padding:10px 12px;line-height:1.9"></div>
+    </div>
+    <div style="padding:12px 22px;display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="atualizarDiagnostico()" class="btn btn-secondary" style="font-size:12px;padding:7px 16px">🔄 Atualizar</button>
+      <button onclick="fecharDiagnosticoFirebase()" class="btn btn-primary" style="font-size:12px;padding:7px 16px">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// FIREBASE STATUS MELHORADO + MODAL DIAGNÓSTICO
+// ================================================================
+window._fbStatus = { conectado:false, tentativas:0, colecoes:{colaboradores:false,supervisores:false,visitas:false,postos_custom:false} };
+
+function _atualizarBadgeFB(on) {
+  var dot=document.getElementById('fbDot'), txt=document.getElementById('fbStatusText'), bdg=document.getElementById('fbStatusBadge');
+  if(!dot||!txt) return;
+  window._fbStatus.conectado = on;
+  if(on) {
+    dot.style.background='var(--green)'; dot.style.boxShadow='0 0 5px var(--green)';
+    txt.textContent='✅ Firebase OK'; txt.style.color='var(--green)';
+    if(bdg) bdg.style.borderColor='rgba(16,185,129,0.4)';
+  } else {
+    dot.style.background='var(--red)'; dot.style.boxShadow='0 0 5px var(--red)';
+    txt.textContent='🔴 Offline'; txt.style.color='var(--red)';
+    if(bdg) bdg.style.borderColor='rgba(239,68,68,0.4)';
+  }
+}
+
+(function() {
+  var chk = setInterval(function() {
+    var c=window._fbStatus.colecoes;
+    c.colaboradores=window._colaboradoresDB!==undefined;
+    c.supervisores=window._supervisoresDB!==undefined;
+    c.visitas=window._visitasDB!==undefined;
+    c.postos_custom=window._postosCustomDB!==undefined;
+    window._fbStatus.tentativas++;
+    if(c.colaboradores||c.supervisores||c.visitas||c.postos_custom){ _atualizarBadgeFB(true); clearInterval(chk); clearTimeout(tmo); }
+  }, 1000);
+  var tmo = setTimeout(function(){
+    clearInterval(chk);
+    var c=window._fbStatus.colecoes;
+    c.colaboradores=window._colaboradoresDB!==undefined; c.supervisores=window._supervisoresDB!==undefined;
+    c.visitas=window._visitasDB!==undefined; c.postos_custom=window._postosCustomDB!==undefined;
+    _atualizarBadgeFB(c.colaboradores||c.supervisores||c.visitas||c.postos_custom);
+  }, 10000);
+  window.addEventListener('online', function(){ _atualizarBadgeFB(true); });
+  window.addEventListener('offline', function(){ _atualizarBadgeFB(false); });
+})();
+
+function abrirDiagnosticoFirebase() {
+  var m=document.getElementById('fbDiagModal'); if(!m) return;
+  m.style.display='flex'; atualizarDiagnostico();
+}
+function fecharDiagnosticoFirebase() {
+  var m=document.getElementById('fbDiagModal'); if(m) m.style.display='none';
+}
+function atualizarDiagnostico() {
+  var c=window._fbStatus.colecoes;
+  c.colaboradores=window._colaboradoresDB!==undefined; c.supervisores=window._supervisoresDB!==undefined;
+  c.visitas=window._visitasDB!==undefined; c.postos_custom=window._postosCustomDB!==undefined;
+  var online=navigator.onLine, todas=c.colaboradores&&c.supervisores&&c.visitas&&c.postos_custom, alguma=c.colaboradores||c.supervisores||c.visitas||c.postos_custom;
+  var icon=document.getElementById('diagIconGeral'), ttl=document.getElementById('diagTitleGeral'), sub=document.getElementById('diagSubGeral');
+  if(!icon) return;
+  if(todas&&online)       { icon.textContent='✅'; ttl.textContent='Conectado ao Firebase';  ttl.style.color='var(--green)'; sub.textContent='Todas as coleções respondendo normalmente.'; }
+  else if(alguma&&online) { icon.textContent='⚠️'; ttl.textContent='Conexão Parcial';        ttl.style.color='var(--accent)'; sub.textContent='Algumas coleções ainda não responderam.'; }
+  else if(!online)        { icon.textContent='🔴'; ttl.textContent='Sem Internet';           ttl.style.color='var(--red)'; sub.textContent='Dispositivo offline. Verifique sua conexão.'; }
+  else                    { icon.textContent='🔴'; ttl.textContent='Firebase Desconectado';  ttl.style.color='var(--red)'; sub.textContent='Não foi possível conectar ao banco de dados.'; }
+  var list=[
+    {key:'colaboradores',label:'Colaboradores',icon:'👥',cnt:(window._colaboradoresDB||[]).length},
+    {key:'supervisores', label:'Supervisores', icon:'🎖️',cnt:(window._supervisoresDB||[]).length},
+    {key:'visitas',      label:'Visitas/Histórico',icon:'📋',cnt:(window._visitasDB||[]).length},
+    {key:'postos_custom',label:'Postos Custom',icon:'📍',cnt:(window._postosCustomDB||[]).length}
+  ];
+  document.getElementById('diagColecoes').innerHTML=list.map(function(x){
+    var ok=c[x.key];
+    return '<div style="display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:7px;padding:8px 12px;border:1px solid '+(ok?'rgba(16,185,129,0.25)':'rgba(239,68,68,0.2)')+'">'+
+      '<span style="font-size:15px">'+x.icon+'</span><span style="flex:1;font-size:13px;font-weight:500">'+x.label+'</span>'+
+      (ok?'<span style="font-size:11px;color:var(--muted)">'+x.cnt+' registros</span><span style="color:var(--green);font-size:14px;margin-left:6px">✅</span>'
+         :'<span style="color:var(--red);font-size:12px;font-weight:600">Sem dados</span><span style="color:var(--red);font-size:13px;margin-left:6px">✗</span>')+
+    '</div>';
+  }).join('');
+  document.getElementById('diagTecnico').innerHTML=
+    'Projeto: <span style="color:var(--text)">rota-do-supervisor</span><br>'+
+    'SDK: <span style="color:var(--text)">Firebase 10.12.2 Firestore</span><br>'+
+    'Internet: <span style="color:'+(online?'var(--green)':'var(--red)')+'">'+( online?'Online ✓':'Offline ✗')+'</span><br>'+
+    'Checagem: <span style="color:var(--text)">'+new Date().toLocaleTimeString('pt-BR')+'</span><br>'+
+    'Tentativas: <span style="color:var(--text)">'+window._fbStatus.tentativas+'</span><br>'+
+    'window._db: <span style="color:'+(window._db?'var(--green)':'var(--red)')+'">'+( window._db?'instanciado ✓':'não disponível')+'</span>';
+}
+</script>
+
 </body>
 </html>
