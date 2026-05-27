@@ -379,6 +379,23 @@
   onSnapshot(collection(db, 'postos_custom'), function(snap) {
     var lista = [];
     snap.forEach(function(d){ lista.push(Object.assign({ _id: d.id }, d.data())); });
+
+    // Mescla com localStorage: postos locais que ainda não foram para o Firebase são migrados
+    var local = [];
+    try { local = JSON.parse(localStorage.getItem('ms_postos_custom') || '[]'); } catch(e){}
+    var fbIds = lista.map(function(p){ return p.id; });
+    var migrar = local.filter(function(lp){ return lp.id && !fbIds.includes(lp.id); });
+    if(migrar.length > 0) {
+      // Migra postos locais para o Firebase silenciosamente
+      migrar.forEach(function(mp){
+        if(window.fb_salvarPostoCustom) {
+          window.fb_salvarPostoCustom(mp).catch(function(){});
+        }
+      });
+      // Enquanto não sincroniza, inclui na lista local
+      lista = lista.concat(migrar);
+    }
+
     window._postosCustomDB = lista;
     window.POSTOS_CUSTOM = lista;
     if(typeof buildPostos === 'function') {
@@ -1774,7 +1791,8 @@ function renderPostosList() {
       '<td>'+(rota?'<span style="color:'+rota.cor+';font-weight:600;font-size:12px">'+rota.nome+'</span>':'—')+'</td>' +
       '<td><span class="'+(custom?'badge-custom':'badge-base')+'">'+( custom?'Personalizado':'Base')+'</span></td>' +
       '<td><div style="display:flex;gap:4px">' +
-        (custom?'<button class="btn-edit-posto" onclick="editarPosto('+p.id+')">✏️</button><button class="btn-delete-posto" onclick="deletarPosto('+p.id+')">🗑</button>':'<span style="font-size:11px;color:var(--muted)">—</span>')+
+        '<button class="btn-edit-posto" onclick="editarPosto('+p.id+')" title="Editar posto">✏️</button>' +
+        (custom?'<button class="btn-delete-posto" onclick="deletarPosto('+p.id+')" title="Excluir posto">🗑</button>':'') +
       '</div></td>' +
     '</tr>';
   });
@@ -1803,6 +1821,14 @@ function salvarPosto() {
     if(idx >= 0) {
       var endereco_val = document.getElementById('pEndereco') ? document.getElementById('pEndereco').value.trim() : '';
       POSTOS_CUSTOM[idx] = { id:parseInt(editId), nome:nome, cidade:cidade, tipo:tipo, rota:rota, lat:lat, lng:lng, endereco:endereco_val };
+    } else {
+      // Posto base sendo editado pela primeira vez: já foi adicionado em editarPosto(), só atualiza
+      var idxBase = POSTOS_CUSTOM.findIndex(function(p){ return p.id === parseInt(editId); });
+      if(idxBase < 0) {
+        // Cria cópia editada
+        var endereco_val = document.getElementById('pEndereco') ? document.getElementById('pEndereco').value.trim() : '';
+        POSTOS_CUSTOM.push({ id:parseInt(editId), nome:nome, cidade:cidade, tipo:tipo, rota:rota, lat:lat, lng:lng, endereco:endereco_val });
+      }
     }
     showToast('✅ Posto atualizado!');
   } else {
@@ -1820,7 +1846,7 @@ function salvarPosto() {
   // Salva no Firebase e cache local
   if(window.fb_salvarPostoCustom) {
     var postoParaSalvar = editId
-      ? { id:parseInt(editId), nome:nome, cidade:cidade, tipo:tipo, rota:rota, lat:lat, lng:lng }
+      ? { id:parseInt(editId), nome:nome, cidade:cidade, tipo:tipo, rota:rota, lat:lat, lng:lng, endereco: document.getElementById('pEndereco').value.trim() }
       : POSTOS_CUSTOM[POSTOS_CUSTOM.length - 1];
     window.fb_salvarPostoCustom(postoParaSalvar);
   }
@@ -1832,7 +1858,17 @@ function salvarPosto() {
 
 function editarPosto(id) {
   var p = getPostoById(id);
-  if(!p || !isCustom(p)) return;
+  if(!p) return;
+  // Se for posto base, cria uma cópia custom editável
+  if(!isCustom(p)) {
+    var copia = Object.assign({}, p);
+    // Remove da base e adiciona como custom
+    POSTOS_CUSTOM.push(copia);
+    saveCustomPostos();
+    buildPostos();
+    // Avisa que o posto base virou editável
+    showToast('📝 Posto base convertido para edição.');
+  }
   document.getElementById('editingPostoId').value = id;
   document.getElementById('pNome').value = p.nome;
   document.getElementById('pCidade').value = p.cidade;
@@ -1843,7 +1879,7 @@ function editarPosto(id) {
   document.getElementById('pEndereco').value = p.endereco || '';
   document.getElementById('formCardTitle').textContent = 'Editar Posto #'+id;
   document.getElementById('btnCancelarEdicao').style.display = '';
-  document.getElementById('panel-postos').scrollTo(0,0);
+  showTabByName('postos');
   window.scrollTo(0,0);
 }
 
