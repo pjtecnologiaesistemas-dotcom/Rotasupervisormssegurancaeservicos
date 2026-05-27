@@ -383,18 +383,33 @@
     // Mescla com localStorage: postos locais que ainda não foram para o Firebase são migrados
     var local = [];
     try { local = JSON.parse(localStorage.getItem('ms_postos_custom') || '[]'); } catch(e){}
-    var fbIds = lista.map(function(p){ return p.id; });
-    var migrar = local.filter(function(lp){ return lp.id && !fbIds.includes(lp.id); });
+
+    // IDs presentes no Firebase (usando id numérico do posto, não o doc id do Firestore)
+    var fbNumIds = lista.map(function(p){ return p.id; }).filter(Boolean);
+
+    // Postos locais ausentes no Firebase: migrar
+    var migrar = local.filter(function(lp){ return lp.id && !fbNumIds.includes(lp.id); });
     if(migrar.length > 0) {
-      // Migra postos locais para o Firebase silenciosamente
       migrar.forEach(function(mp){
         if(window.fb_salvarPostoCustom) {
           window.fb_salvarPostoCustom(mp).catch(function(){});
         }
       });
-      // Enquanto não sincroniza, inclui na lista local
       lista = lista.concat(migrar);
     }
+
+    // Sincroniza o localStorage com o estado mais recente do Firebase (mescla: FB tem prioridade)
+    var mergedLocal = local.map(function(lp) {
+      var fbVersion = lista.find(function(fp){ return fp.id === lp.id; });
+      return fbVersion || lp;
+    });
+    // Adiciona os que estão no FB mas não no local
+    lista.forEach(function(fp) {
+      if(fp.id && !mergedLocal.find(function(lp){ return lp.id === fp.id; })) {
+        mergedLocal.push(fp);
+      }
+    });
+    localStorage.setItem('ms_postos_custom', JSON.stringify(mergedLocal));
 
     window._postosCustomDB = lista;
     window.POSTOS_CUSTOM = lista;
@@ -471,13 +486,11 @@
   // Postos custom
   window.fb_salvarPostoCustom = async function(posto) {
     try {
-      var p = Object.assign({}, posto, { createdAt: serverTimestamp() });
+      var p = Object.assign({}, posto, { updatedAt: serverTimestamp() });
       delete p._id;
-      if(posto._id) {
-        await setDoc(doc(db, 'postos_custom', String(posto._id)), p);
-      } else {
-        await addDoc(collection(db, 'postos_custom'), p);
-      }
+      // Usa sempre o id numérico como chave do documento para garantir upsert correto
+      var docKey = posto._id || String(posto.id);
+      await setDoc(doc(db, 'postos_custom', docKey), p, { merge: true });
       return true;
     } catch(e) { console.error(e); return false; }
   };
@@ -1037,7 +1050,10 @@ function saveCustomPostos() {
   localStorage.setItem('ms_postos_custom', JSON.stringify(POSTOS_CUSTOM));
 }
 function buildPostos() {
-  POSTOS = POSTOS_BASE.concat(POSTOS_CUSTOM);
+  // Postos custom têm prioridade: se um custom tem o mesmo id que um base, o base é ignorado
+  var customIds = POSTOS_CUSTOM.map(function(c){ return c.id; });
+  var base = POSTOS_BASE.filter(function(b){ return !customIds.includes(b.id); });
+  POSTOS = base.concat(POSTOS_CUSTOM);
 }
 function getPostoById(id) {
   return POSTOS.find(function(p){ return p.id === id; });
@@ -1815,20 +1831,16 @@ function salvarPosto() {
   if(!rota){ showToast('⚠️ Selecione a rota','error'); return; }
   if(isNaN(lat)||isNaN(lng)){ showToast('⚠️ Coordenadas inválidas. Use o botão Localizar ou preencha manualmente.','error'); return; }
 
+  var endereco_val = document.getElementById('pEndereco') ? document.getElementById('pEndereco').value.trim() : '';
+
   if(editId) {
-    // Editar posto custom existente
+    // Upsert no array POSTOS_CUSTOM: atualiza se existir, insere se não
     var idx = POSTOS_CUSTOM.findIndex(function(p){ return p.id === parseInt(editId); });
+    var postoAtualizado = { id:parseInt(editId), nome:nome, cidade:cidade, tipo:tipo, rota:rota, lat:lat, lng:lng, endereco:endereco_val };
     if(idx >= 0) {
-      var endereco_val = document.getElementById('pEndereco') ? document.getElementById('pEndereco').value.trim() : '';
-      POSTOS_CUSTOM[idx] = { id:parseInt(editId), nome:nome, cidade:cidade, tipo:tipo, rota:rota, lat:lat, lng:lng, endereco:endereco_val };
+      POSTOS_CUSTOM[idx] = postoAtualizado;
     } else {
-      // Posto base sendo editado pela primeira vez: já foi adicionado em editarPosto(), só atualiza
-      var idxBase = POSTOS_CUSTOM.findIndex(function(p){ return p.id === parseInt(editId); });
-      if(idxBase < 0) {
-        // Cria cópia editada
-        var endereco_val = document.getElementById('pEndereco') ? document.getElementById('pEndereco').value.trim() : '';
-        POSTOS_CUSTOM.push({ id:parseInt(editId), nome:nome, cidade:cidade, tipo:tipo, rota:rota, lat:lat, lng:lng, endereco:endereco_val });
-      }
+      POSTOS_CUSTOM.push(postoAtualizado);
     }
     showToast('✅ Posto atualizado!');
   } else {
