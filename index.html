@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Supervisor de Rotas — Grupo M.S Segurança</title>
+<title>Supervisor de Rotas v4 — Grupo M.S Segurança</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -298,6 +298,21 @@
 <!-- ===== MAPA ===== -->
 <div id="panel-mapa" class="panel active">
   <div class="container" style="padding-top:16px">
+
+    <!-- Barra de configuração da chave Google Maps -->
+    <div id="gmapsKeyBar" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:18px">🗺️</span>
+      <span style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap">Google Maps API Key</span>
+      <input id="gmapsKeyInput" type="password" placeholder="Cole sua chave aqui: AIzaSy..." 
+        style="flex:1;min-width:220px;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px;transition:border-color 0.15s"
+        onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
+        onkeydown="if(event.key==='Enter')carregarGoogleMapsComChave()" />
+      <button onclick="toggleGmapsKeyVis()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:7px 10px;border-radius:6px;cursor:pointer;font-size:13px" title="Mostrar/ocultar">👁</button>
+      <button onclick="carregarGoogleMapsComChave()" style="background:var(--accent);border:none;color:#000;padding:7px 16px;border-radius:6px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">▶ Carregar Mapa</button>
+      <span id="gmapsKeyStatus" style="font-size:12px;color:var(--muted)"></span>
+      <a href="https://developers.google.com/maps/documentation/javascript/get-api-key" target="_blank" style="font-size:11px;color:var(--accent);text-decoration:none;white-space:nowrap">Como obter →</a>
+    </div>
+
     <div class="map-controls">
       <button class="map-ctrl-btn" onclick="filtrarMapaRota(0)" id="mapBtnTodos" style="border-color:var(--accent);color:var(--accent)">● Todos</button>
       <button class="map-ctrl-btn" onclick="filtrarMapaRota(1)" id="mapBtn1" style="color:#3b82f6">● Alpha</button>
@@ -1668,7 +1683,12 @@ function showTab(tab, el) {
   document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
   if(el) el.classList.add('active');
   document.getElementById('panel-'+tab).classList.add('active');
-  if(tab==='mapa' && !window._mapLoaded){ window._mapLoaded=true; setTimeout(initMap,100); }
+  if(tab==='mapa') {
+    if(!window._mapLoaded && typeof google !== 'undefined' && google.maps) {
+      window._mapLoaded = true;
+      setTimeout(initMap, 100);
+    }
+  }
   if(tab==='historico') renderHistorico();
 }
 
@@ -1730,15 +1750,18 @@ document.addEventListener('DOMContentLoaded', function(){
   renderPostosList();
   renderHistorico();
 
-  // Carregar API key salva
+  // Carregar API key Anthropic salva
   var savedKey = localStorage.getItem('ms_anthropic_key');
   if(savedKey) document.getElementById('cfgApiKey').value = savedKey;
+
+  // Inicializar Google Maps (carrega chave salva automaticamente)
+  initGmapsKey();
 
   // Modal fecha com clique fora
   document.getElementById('rotaModal').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
 
   // Versão para debug
-  console.log('[MS Rotas v3.1] Carregado. Funções: geocodificar='+typeof geocodificar+' analisarRotaPorGeo='+typeof analisarRotaPorGeo+' abrirGoogleMaps='+typeof abrirGoogleMaps);
+  console.log('[MS Rotas v4.0] Carregado. Funções: geocodificar='+typeof geocodificar+' analisarRotaPorGeo='+typeof analisarRotaPorGeo+' abrirGoogleMaps='+typeof abrirGoogleMaps);
 });
 </script>
 
@@ -1746,25 +1769,81 @@ document.addEventListener('DOMContentLoaded', function(){
 <script>
 function initMapOnLoad(){
   try {
-    if(document.getElementById('panel-mapa').classList.contains('active')){
-      window._mapLoaded=true;
-      initMap();
-    }
+    var statusEl = document.getElementById('gmapsKeyStatus');
+    if(statusEl) { statusEl.style.color = 'var(--green)'; statusEl.textContent = '✅ Mapa carregado'; }
+    // Minimiza barra após 3s
+    setTimeout(function(){
+      var bar = document.getElementById('gmapsKeyBar');
+      if(bar) bar.style.opacity = '0.65';
+    }, 3000);
+    window._mapLoaded = true;
+    initMap();
   } catch(e){ mapError(); }
 }
 function mapError(){
   var el = document.getElementById('map');
   if(!el) return;
   el.innerHTML=
-    '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted);gap:12px">'+
-    '<div style="font-size:48px">🗺️</div>'+
-    '<p style="font-size:14px;text-align:center">Para o mapa interativo, adicione sua chave da Google Maps API.<br><br>'+
+    '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted);gap:16px">'+
+    '<div style="font-size:52px">🗺️</div>'+
+    '<p style="font-size:15px;font-weight:600;color:var(--text)">Mapa não carregado</p>'+
+    '<p style="font-size:13px;text-align:center;max-width:380px;line-height:1.6">Cole sua chave da Google Maps API no campo acima e clique em <strong style="color:var(--accent)">▶ Carregar Mapa</strong>.<br><br>'+
     '<a href="https://developers.google.com/maps/documentation/javascript/get-api-key" target="_blank" style="color:var(--accent)">Como obter uma chave gratuita →</a></p>'+
-    '<p style="font-size:12px;text-align:center;margin-top:4px">Substitua <code style="background:var(--surface2);padding:2px 6px;border-radius:3px">AIzaSyD-placeholder</code> pela sua chave.</p>'+
-    '<p style="font-size:11px;color:var(--muted);margin-top:4px">A geocodificação de endereços (aba Gestão de Postos) funciona sem a chave.</p>'+
+    '<p style="font-size:11px;color:var(--muted);margin-top:4px">💡 A chave é salva localmente no seu navegador.</p>'+
     '</div>';
 }
+
+// ── Gerenciamento da chave Google Maps ──
+function toggleGmapsKeyVis() {
+  var inp = document.getElementById('gmapsKeyInput');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function carregarGoogleMapsComChave() {
+  var key = document.getElementById('gmapsKeyInput').value.trim();
+  if(!key || key.length < 10) {
+    showToast('⚠️ Cole uma chave de API válida antes de carregar.', 'error');
+    return;
+  }
+  // Salvar chave no localStorage
+  localStorage.setItem('ms_gmaps_key', key);
+
+  var statusEl = document.getElementById('gmapsKeyStatus');
+  statusEl.style.color = 'var(--muted)';
+  statusEl.textContent = '⏳ Carregando...';
+
+  // Remove script antigo se existir
+  var oldScript = document.getElementById('gmapsScript');
+  if(oldScript) oldScript.remove();
+  window._mapLoaded = false;
+  window.google = undefined;
+  if(map) { map = null; markers = []; polylines = []; }
+
+  var script = document.createElement('script');
+  script.id = 'gmapsScript';
+  script.src = 'https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(key)+'&callback=initMapOnLoad';
+  script.async = true;
+  script.defer = true;
+  script.onerror = function() {
+    statusEl.style.color = 'var(--red)';
+    statusEl.textContent = '❌ Chave inválida ou sem permissão.';
+    mapError();
+  };
+  document.head.appendChild(script);
+}
+
+// Auto-carregar chave salva ao iniciar - chamado no DOMContentLoaded principal
+function initGmapsKey() {
+  var savedKey = localStorage.getItem('ms_gmaps_key');
+  if(savedKey) {
+    document.getElementById('gmapsKeyInput').value = savedKey;
+    document.getElementById('gmapsKeyStatus').textContent = '🔑 Chave salva — carregando...';
+    carregarGoogleMapsComChave();
+  } else {
+    mapError();
+  }
+}
 </script>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD-placeholder&callback=initMapOnLoad" async defer onerror="mapError()"></script>
+<!-- Google Maps API: carregado dinamicamente via carregarGoogleMapsComChave() -->
 </body>
 </html>
