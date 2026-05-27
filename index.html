@@ -276,6 +276,30 @@
   /* SECTION TITLE */
   .section-title { font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700;margin-bottom:20px; }
   .section-subtitle { display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px; }
+
+  /* BANCO DE DADOS */
+  .db-layout { display:grid;grid-template-columns:1fr 1fr;gap:24px; }
+  @media(max-width:900px){ .db-layout{grid-template-columns:1fr;} }
+  .db-card { background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden; }
+  .db-card-header { padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between; }
+  .db-card-header h3 { font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px; }
+  .db-add-row { padding:14px 20px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;background:var(--surface2); }
+  .db-add-row .form-input { flex:1; }
+  .db-list { max-height:340px;overflow-y:auto; }
+  .db-item { display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);transition:background 0.15s; }
+  .db-item:last-child { border-bottom:none; }
+  .db-item:hover { background:var(--surface2); }
+  .db-item-icon { width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0; }
+  .db-item-name { flex:1;font-size:13px;font-weight:500; }
+  .db-item-badge { font-size:10px;font-weight:600;padding:2px 8px;border-radius:3px;margin-right:4px; }
+  .db-empty { text-align:center;padding:32px 20px;color:var(--muted);font-size:13px; }
+
+  /* Supervisor ativo */
+  .supervisor-ativo-bar { background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(59,130,246,0.08));border:1px solid rgba(245,158,11,0.35);border-radius:10px;padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap; }
+  .supervisor-ativo-bar .label { font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap; }
+  .supervisor-ativo-bar select { flex:1;min-width:200px;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:7px;font-family:'Barlow',sans-serif;font-size:14px;cursor:pointer; }
+  .supervisor-ativo-bar select:focus { outline:none;border-color:var(--accent); }
+  .supervisor-ativo-badge { background:rgba(16,185,129,0.15);color:var(--green);font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;white-space:nowrap; }
 </style>
 </head>
 <body>
@@ -295,6 +319,7 @@
   <div class="tab" onclick="showTab('ia',this)">🧠 IA de Rotas</div>
   <div class="tab" onclick="showTab('checklist',this)">✅ Checklist</div>
   <div class="tab" onclick="showTab('historico',this)">📋 Histórico</div>
+  <div class="tab" onclick="showTab('banco',this)">🗃️ Banco de Dados</div>
 </div>
 
 <!-- ===== MAPA ===== -->
@@ -579,6 +604,60 @@
   </div>
 </div>
 
+<!-- ===== BANCO DE DADOS ===== -->
+<div id="panel-banco" class="panel">
+  <div class="container">
+    <h2 class="section-title">🗃️ Banco de Dados</h2>
+
+    <!-- Supervisor Ativo -->
+    <div class="supervisor-ativo-bar">
+      <span class="label">👤 Supervisor em Serviço:</span>
+      <select id="supervisorAtivoSelect" onchange="salvarSupervisorAtivo()">
+        <option value="">— Selecione o supervisor —</option>
+      </select>
+      <span class="supervisor-ativo-badge" id="supervisorAtivoBadge" style="display:none">✅ Em serviço</span>
+    </div>
+
+    <div class="db-layout">
+      <!-- Colaboradores -->
+      <div class="db-card">
+        <div class="db-card-header">
+          <h3>👷 Colaboradores</h3>
+          <span id="colabCount" style="font-size:12px;color:var(--muted)">0 cadastrados</span>
+        </div>
+        <div class="db-add-row">
+          <div style="flex:1">
+            <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">Nome do Colaborador</div>
+            <input class="form-input" id="novoColabNome" placeholder="Ex: João da Silva" />
+          </div>
+          <div style="min-width:130px">
+            <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">Cargo</div>
+            <input class="form-input" id="novoColabCargo" placeholder="Ex: Vigilante" />
+          </div>
+          <button class="btn btn-primary" onclick="adicionarColab()" style="padding:9px 16px;white-space:nowrap">＋ Adicionar</button>
+        </div>
+        <div class="db-list" id="colabList"></div>
+      </div>
+
+      <!-- Supervisores -->
+      <div class="db-card">
+        <div class="db-card-header">
+          <h3>🎖️ Supervisores</h3>
+          <span id="supervCount" style="font-size:12px;color:var(--muted)">0 cadastrados</span>
+        </div>
+        <div class="db-add-row">
+          <div style="flex:1">
+            <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">Nome do Supervisor</div>
+            <input class="form-input" id="novoSupervNome" placeholder="Ex: Paulo Roberto Jardim" />
+          </div>
+          <button class="btn btn-primary" onclick="adicionarSuperv()" style="padding:9px 16px;white-space:nowrap">＋ Adicionar</button>
+        </div>
+        <div class="db-list" id="supervList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL Rota no Mapa -->
 <div class="modal-overlay" id="rotaModal">
   <div class="modal">
@@ -617,7 +696,9 @@
       <input type="hidden" id="vistoriaPostoId" value="">
       <div>
         <label style="display:block;font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">Supervisor</label>
-        <input id="vistoriaSuperv" type="text" value="Paulo Roberto Jardim" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 9px;border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px">
+        <select id="vistoriaSuperv" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 9px;border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px">
+          <option value="">— Selecione —</option>
+        </select>
       </div>
       <div>
         <label style="display:block;font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">Data / Hora</label>
@@ -625,7 +706,9 @@
       </div>
       <div>
         <label style="display:block;font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">Colaborador</label>
-        <input id="vistoriaColab" type="text" placeholder="Nome" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 9px;border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px">
+        <select id="vistoriaColab" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 9px;border-radius:6px;font-family:'Barlow',sans-serif;font-size:13px">
+          <option value="">— Selecione —</option>
+        </select>
       </div>
       <div>
         <label style="display:block;font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">Turno</label>
@@ -981,6 +1064,9 @@ function abrirVistoriaModal(postoId) {
   modal.querySelectorAll('input[type=checkbox]').forEach(function(cb){ cb.checked = false; });
   document.getElementById('vistoriaObs').value = '';
   atualizarProgressoVistoria();
+
+  // Atualiza selects de supervisor e colaborador
+  atualizarSelectsVistoria();
 
   modal.classList.add('open');
   map.setCenter({ lat: posto.lat, lng: posto.lng });
@@ -2115,12 +2201,17 @@ function renderChecklist() {
     '<div><h2>'+posto.nome+'</h2><p>'+posto.cidade+' · '+(rota?rota.nome:'—')+' · '+posto.tipo+'</p></div>'+
   '</div>';
   html += '<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>';
+  var supervOpts = buildSelectOpts(getSupervisores(), 'Selecione o supervisor');
+  var colabOpts = buildSelectOpts(getColaboradores(), 'Selecione o colaborador');
+  var supervisorAtivo = localStorage.getItem('ms_supervisor_ativo')||'';
   html += '<div class="checklist-meta">'+
-    '<div class="meta-field"><label>Supervisor</label><input type="text" id="supervInput" placeholder="Seu nome" value="Paulo Roberto Jardim"></div>'+
+    '<div class="meta-field"><label>Supervisor</label><select id="supervInput" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:Barlow,sans-serif;font-size:13px;width:100%">'+supervOpts+'</select></div>'+
     '<div class="meta-field"><label>Data / Hora</label><input type="datetime-local" id="dataInput" value="'+now.toISOString().slice(0,16)+'"></div>'+
-    '<div class="meta-field"><label>Colaborador no Posto</label><input type="text" id="colabInput" placeholder="Nome do colaborador"></div>'+
+    '<div class="meta-field"><label>Colaborador no Posto</label><select id="colabInput" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:Barlow,sans-serif;font-size:13px;width:100%">'+colabOpts+'</select></div>'+
     '<div class="meta-field"><label>Turno</label><select id="turnoInput" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:Barlow,sans-serif;font-size:13px;width:100%"><option>Diurno (06h-18h)</option><option>Noturno (18h-06h)</option><option>Misto</option></select></div>'+
   '</div>';
+  // Pre-select supervisor ativo
+  setTimeout(function(){ var sel=document.getElementById('supervInput'); if(sel&&supervisorAtivo){ sel.value=supervisorAtivo; } }, 50);
 
   var allChecks = [];
   var ci = 0;
@@ -2233,11 +2324,12 @@ function showTab(tab, el) {
     }
   }
   if(tab==='historico') renderHistorico();
+  if(tab==='banco') { renderBancoDados(); renderSupervisorAtivoSelect(); }
 }
 
 function showTabByName(tab) {
   var tabs = document.querySelectorAll('.tab');
-  var map = { 'mapa':0,'rotas':1,'postos':2,'ia':3,'checklist':4,'historico':5 };
+  var map = { 'mapa':0,'rotas':1,'postos':2,'ia':3,'checklist':4,'historico':5,'banco':6 };
   var idx = map[tab];
   if(idx !== undefined && tabs[idx]) showTab(tab, tabs[idx]);
 }
@@ -2255,6 +2347,168 @@ function reRenderAll() {
   if(map) {
     renderMarkers();
     if(polylinesVisible) renderPolylines();
+  }
+}
+
+
+// ================================================================
+// BANCO DE DADOS — COLABORADORES E SUPERVISORES
+// ================================================================
+function getColaboradores() {
+  return JSON.parse(localStorage.getItem('ms_colaboradores') || '[]');
+}
+function getSupervisores() {
+  return JSON.parse(localStorage.getItem('ms_supervisores') || '["Paulo Roberto Jardim"]');
+}
+function salvarColaboradores(arr) {
+  localStorage.setItem('ms_colaboradores', JSON.stringify(arr));
+}
+function salvarSupervisores(arr) {
+  localStorage.setItem('ms_supervisores', JSON.stringify(arr));
+}
+
+function buildSelectOpts(arr, placeholder) {
+  var html = '<option value="">— '+placeholder+' —</option>';
+  arr.forEach(function(name){
+    html += '<option value="'+name+'">'+name+'</option>';
+  });
+  return html;
+}
+
+function adicionarColab() {
+  var nome = document.getElementById('novoColabNome').value.trim();
+  var cargo = document.getElementById('novoColabCargo').value.trim();
+  if(!nome){ showToast('⚠️ Informe o nome do colaborador','error'); return; }
+  var lista = getColaboradores();
+  if(lista.find(function(c){ return c.nome === nome; })){ showToast('⚠️ Colaborador já cadastrado','error'); return; }
+  lista.push({ nome: nome, cargo: cargo || 'Vigilante' });
+  salvarColaboradores(lista);
+  document.getElementById('novoColabNome').value = '';
+  document.getElementById('novoColabCargo').value = '';
+  renderBancoDados();
+  showToast('✅ Colaborador "'+nome+'" cadastrado!');
+}
+
+function removerColab(nome) {
+  if(!confirm('Remover colaborador "'+nome+'"?')) return;
+  var lista = getColaboradores().filter(function(c){ return c.nome !== nome; });
+  salvarColaboradores(lista);
+  renderBancoDados();
+  showToast('Colaborador removido.');
+}
+
+function adicionarSuperv() {
+  var nome = document.getElementById('novoSupervNome').value.trim();
+  if(!nome){ showToast('⚠️ Informe o nome do supervisor','error'); return; }
+  var lista = getSupervisores();
+  if(lista.indexOf(nome) !== -1){ showToast('⚠️ Supervisor já cadastrado','error'); return; }
+  lista.push(nome);
+  salvarSupervisores(lista);
+  document.getElementById('novoSupervNome').value = '';
+  renderBancoDados();
+  renderSupervisorAtivoSelect();
+  showToast('✅ Supervisor "'+nome+'" cadastrado!');
+}
+
+function removerSuperv(nome) {
+  if(!confirm('Remover supervisor "'+nome+'"?')) return;
+  var lista = getSupervisores().filter(function(s){ return s !== nome; });
+  salvarSupervisores(lista);
+  var ativo = localStorage.getItem('ms_supervisor_ativo');
+  if(ativo === nome) localStorage.removeItem('ms_supervisor_ativo');
+  renderBancoDados();
+  renderSupervisorAtivoSelect();
+  showToast('Supervisor removido.');
+}
+
+function salvarSupervisorAtivo() {
+  var sel = document.getElementById('supervisorAtivoSelect');
+  var nome = sel ? sel.value : '';
+  if(nome) {
+    localStorage.setItem('ms_supervisor_ativo', nome);
+    var badge = document.getElementById('supervisorAtivoBadge');
+    if(badge){ badge.style.display=''; badge.textContent = '✅ '+nome+' em serviço'; }
+    showToast('👤 Supervisor ativo: '+nome);
+  } else {
+    localStorage.removeItem('ms_supervisor_ativo');
+    var badge2 = document.getElementById('supervisorAtivoBadge');
+    if(badge2) badge2.style.display='none';
+  }
+}
+
+function renderSupervisorAtivoSelect() {
+  var sel = document.getElementById('supervisorAtivoSelect');
+  if(!sel) return;
+  var ativo = localStorage.getItem('ms_supervisor_ativo') || '';
+  var supervisores = getSupervisores();
+  sel.innerHTML = '<option value="">— Selecione o supervisor —</option>';
+  supervisores.forEach(function(s){
+    var opt = document.createElement('option');
+    opt.value = s; opt.textContent = s;
+    if(s === ativo) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  var badge = document.getElementById('supervisorAtivoBadge');
+  if(badge){
+    if(ativo){ badge.style.display=''; badge.textContent='✅ '+ativo+' em serviço'; }
+    else badge.style.display='none';
+  }
+}
+
+function renderBancoDados() {
+  var colab = getColaboradores();
+  var superv = getSupervisores();
+
+  // Contador
+  var cc = document.getElementById('colabCount');
+  if(cc) cc.textContent = colab.length + ' cadastrado'+(colab.length!==1?'s':'');
+  var sc = document.getElementById('supervCount');
+  if(sc) sc.textContent = superv.length + ' cadastrado'+(superv.length!==1?'s':'');
+
+  // Lista colaboradores
+  var cl = document.getElementById('colabList');
+  if(cl) {
+    if(!colab.length){
+      cl.innerHTML = '<div class="db-empty">Nenhum colaborador cadastrado.<br>Adicione acima.</div>';
+    } else {
+      cl.innerHTML = colab.map(function(c){
+        return '<div class="db-item">'+
+          '<div class="db-item-icon" style="background:rgba(59,130,246,0.15);color:#3b82f6">👷</div>'+
+          '<div class="db-item-name">'+c.nome+'<br><span style="font-size:11px;color:var(--muted)">'+c.cargo+'</span></div>'+
+          '<button onclick="removerColab(''+c.nome.replace(/'/g,"\'")+'')" class="btn-delete-posto">✕</button>'+
+        '</div>';
+      }).join('');
+    }
+  }
+
+  // Lista supervisores
+  var sl = document.getElementById('supervList');
+  if(sl) {
+    if(!superv.length){
+      sl.innerHTML = '<div class="db-empty">Nenhum supervisor cadastrado.<br>Adicione acima.</div>';
+    } else {
+      sl.innerHTML = superv.map(function(s){
+        return '<div class="db-item">'+
+          '<div class="db-item-icon" style="background:rgba(245,158,11,0.15);color:var(--accent)">🎖️</div>'+
+          '<div class="db-item-name">'+s+'</div>'+
+          '<button onclick="removerSuperv(''+s.replace(/'/g,"\'")+'')" class="btn-delete-posto">✕</button>'+
+        '</div>';
+      }).join('');
+    }
+  }
+}
+
+function atualizarSelectsVistoria() {
+  // Atualiza selects do modal de vistoria
+  var supervSel = document.getElementById('vistoriaSuperv');
+  var colabSel = document.getElementById('vistoriaColab');
+  var supervisorAtivo = localStorage.getItem('ms_supervisor_ativo') || '';
+  if(supervSel) {
+    supervSel.innerHTML = buildSelectOpts(getSupervisores(), 'Selecione o supervisor');
+    if(supervisorAtivo) supervSel.value = supervisorAtivo;
+  }
+  if(colabSel) {
+    colabSel.innerHTML = buildSelectOpts(getColaboradores().map(function(c){ return c.nome; }), 'Selecione o colaborador');
   }
 }
 
@@ -2293,6 +2547,8 @@ document.addEventListener('DOMContentLoaded', function(){
   renderPostoSelect();
   renderPostosList();
   renderHistorico();
+  renderBancoDados();
+  renderSupervisorAtivoSelect();
 
   // Carregar API key Anthropic salva
   var savedKey = localStorage.getItem('ms_anthropic_key');
@@ -2305,7 +2561,7 @@ document.addEventListener('DOMContentLoaded', function(){
   document.getElementById('rotaModal').addEventListener('click', function(e){ if(e.target===this) closeModal(); });
 
   // Versão para debug
-  console.log('[MS Rotas v4.0] Carregado. Funções: geocodificar='+typeof geocodificar+' analisarRotaPorGeo='+typeof analisarRotaPorGeo+' abrirGoogleMaps='+typeof abrirGoogleMaps);
+  console.log('[MS Rotas v5.0] Carregado. Funções: geocodificar='+typeof geocodificar+' analisarRotaPorGeo='+typeof analisarRotaPorGeo+' abrirGoogleMaps='+typeof abrirGoogleMaps);
 });
 </script>
 
