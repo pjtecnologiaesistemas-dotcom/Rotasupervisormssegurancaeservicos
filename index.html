@@ -411,14 +411,36 @@
                 <option value="">— Selecione a Rota —</option>
               </select>
             </div>
+
+            <!-- LOCALIZAÇÃO: GPS ou Endereço -->
             <div class="form-group">
-              <label>Endereço para Localização</label>
+              <label>Localização <span class="req">*</span></label>
+
+              <!-- Botão GPS grande e destacado -->
+              <button onclick="usarGPSAtual()" id="btnGPS"
+                style="width:100%;padding:13px;border-radius:8px;border:2px dashed var(--green);background:rgba(16,185,129,0.08);color:var(--green);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;margin-bottom:8px"
+                onmouseover="this.style.background='rgba(16,185,129,0.18)'"
+                onmouseout="this.style.background='rgba(16,185,129,0.08)'">
+                <span style="font-size:20px">📡</span> Usar Minha Localização Atual (GPS)
+              </button>
+
+              <!-- Status GPS -->
+              <div id="gpsStatus" style="font-size:12px;min-height:18px;margin-bottom:8px;display:flex;align-items:center;gap:6px"></div>
+
+              <!-- Separador -->
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                <div style="flex:1;height:1px;background:var(--border)"></div>
+                <span style="font-size:11px;color:var(--muted);font-weight:600">OU BUSCAR POR ENDEREÇO</span>
+                <div style="flex:1;height:1px;background:var(--border)"></div>
+              </div>
+
               <div class="geocode-row">
-                <input class="form-input" id="pEndereco" placeholder="Endereço completo para geocodificar..." oninput="agendarSugestaoIA()" />
+                <input class="form-input" id="pEndereco" placeholder="Digite o endereço completo..." oninput="agendarSugestaoIA()" />
                 <button class="btn-geocode" onclick="geocodificar()">📍 Localizar</button>
               </div>
               <div class="geocode-status" id="geocodeStatus"></div>
             </div>
+
             <div class="form-grid-2">
               <div class="form-group">
                 <label>Latitude <span class="req">*</span></label>
@@ -1451,6 +1473,9 @@ function limparFormPosto() {
   document.getElementById('pLng').value = '';
   document.getElementById('pEndereco').value = '';
   document.getElementById('geocodeStatus').textContent = '';
+  var gs = document.getElementById('gpsStatus'); if(gs) gs.innerHTML = '';
+  var btnGPS = document.getElementById('btnGPS');
+  if(btnGPS) { btnGPS.innerHTML = '<span style="font-size:20px">📡</span> Usar Minha Localização Atual (GPS)'; btnGPS.disabled = false; btnGPS.style.borderColor = 'var(--green)'; }
   document.getElementById('coordsPreview').style.display = 'none';
   document.getElementById('formCardTitle').textContent = 'Cadastrar Novo Posto';
   document.getElementById('btnCancelarEdicao').style.display = 'none';
@@ -1571,6 +1596,103 @@ function renderBotoesRota(acoes, rotaId) {
     btn.onclick = function(){ document.getElementById('pRota').value = r.id; showToast('Rota '+r.nome+' selecionada!'); };
     acoes.appendChild(btn);
   });
+}
+
+// ================================================================
+// GPS ATUAL — captura localização do dispositivo
+// ================================================================
+function usarGPSAtual() {
+  var btn = document.getElementById('btnGPS');
+  var statusEl = document.getElementById('gpsStatus');
+
+  if(!navigator.geolocation) {
+    statusEl.innerHTML = '<span style="color:var(--red)">❌ GPS não suportado neste navegador.</span>';
+    return;
+  }
+
+  // Feedback visual de carregando
+  btn.innerHTML = '<div style="width:16px;height:16px;border:2px solid rgba(16,185,129,0.4);border-top-color:#10b981;border-radius:50%;animation:spin 0.8s linear infinite"></div> Obtendo localização...';
+  btn.disabled = true;
+  statusEl.innerHTML = '<span style="color:var(--muted)">⏳ Aguardando GPS do dispositivo...</span>';
+
+  navigator.geolocation.getCurrentPosition(
+    function(pos) {
+      var lat = pos.coords.latitude;
+      var lng = pos.coords.longitude;
+      var acc = Math.round(pos.coords.accuracy);
+
+      // Preenche os campos
+      document.getElementById('pLat').value = lat.toFixed(6);
+      document.getElementById('pLng').value = lng.toFixed(6);
+
+      // Mostra coordenadas
+      var prev = document.getElementById('coordsPreview');
+      prev.textContent = 'Lat: '+lat.toFixed(6)+' · Lng: '+lng.toFixed(6);
+      prev.style.display = 'block';
+
+      // Status de sucesso
+      statusEl.innerHTML = '<span style="color:var(--green)">✅ Localização capturada! Precisão: ~'+acc+'m</span>';
+
+      // Restaura botão
+      btn.innerHTML = '<span style="font-size:20px">📡</span> Usar Minha Localização Atual (GPS)';
+      btn.disabled = false;
+      btn.style.borderColor = 'var(--green)';
+
+      // Busca endereço automaticamente via Nominatim (geocodificação reversa)
+      statusEl.innerHTML += ' <span style="color:var(--muted)">· buscando endereço...</span>';
+      var urlRev = 'https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lng+'&format=json&accept-language=pt-BR';
+      fetch(urlRev, { headers:{ 'User-Agent':'MS-Seguranca-Routes-App' } })
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+          if(data && data.address) {
+            var a = data.address;
+            // Preenche cidade automaticamente se estiver vazio
+            var cidade = a.city || a.town || a.village || a.municipality || '';
+            if(cidade && !document.getElementById('pCidade').value) {
+              document.getElementById('pCidade').value = cidade;
+            }
+            // Preenche endereço
+            var rua = (a.road || '') + (a.house_number ? ', '+a.house_number : '');
+            var endFull = [rua, a.suburb, cidade].filter(Boolean).join(', ');
+            if(endFull) document.getElementById('pEndereco').value = endFull;
+
+            statusEl.innerHTML = '<span style="color:var(--green)">✅ Localização e endereço preenchidos! Precisão: ~'+acc+'m</span>';
+            agendarSugestaoIA();
+          }
+        })
+        .catch(function(){ /* silencioso — coordenadas já foram preenchidas */ });
+
+      // Preview no mapa se estiver aberto
+      if(window.map && window._mapLoaded && typeof google !== 'undefined') {
+        map.setCenter({ lat:lat, lng:lng });
+        map.setZoom(17);
+        if(window._previewMarker) try{ window._previewMarker.setMap(null); }catch(e){}
+        window._previewMarker = new google.maps.Marker({
+          position:{ lat:lat, lng:lng }, map:map,
+          title:'📡 Localização atual',
+          icon:{ path:google.maps.SymbolPath.CIRCLE, scale:14,
+                 fillColor:'#10b981', fillOpacity:1,
+                 strokeColor:'#fff', strokeWeight:3 },
+          animation: google.maps.Animation.BOUNCE
+        });
+        setTimeout(function(){ if(window._previewMarker) try{ window._previewMarker.setAnimation(null); }catch(e){} }, 3000);
+      }
+
+      // Sugestão de rota por geolocalização
+      analisarRotaPorGeo(lat, lng, 'Localização atual');
+    },
+    function(err) {
+      btn.innerHTML = '<span style="font-size:20px">📡</span> Usar Minha Localização Atual (GPS)';
+      btn.disabled = false;
+      var msgs = {
+        1: 'Permissão negada. Permita o acesso à localização no navegador.',
+        2: 'Posição indisponível. Verifique se o GPS está ativo.',
+        3: 'Tempo esgotado. Tente novamente ao ar livre.'
+      };
+      statusEl.innerHTML = '<span style="color:var(--red)">❌ '+(msgs[err.code]||'Erro desconhecido.')+'</span>';
+    },
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+  );
 }
 
 // ================================================================
