@@ -934,21 +934,21 @@
 // DADOS BASE (hardcoded)
 // ================================================================
 var POSTOS_BASE = [
-  { id:1,  nome:"Residencial Vale Verde",  cidade:"Mogi Guaçu", lat:-22.378214, lng:-46.94969,  rota:1, tipo:"Residencial" },
-  { id:2,  nome:"Morro Vermelho II",       cidade:"Mogi Guaçu", lat:-22.407241, lng:-46.941305, rota:1, tipo:"Residencial" },
-  { id:3,  nome:"Jardim da Colina",        cidade:"Mogi Mirim", lat:-22.431314, lng:-46.978112, rota:3, tipo:"Residencial" },
-  { id:4,  nome:"Icobit Brasil",           cidade:"Mogi Guaçu", lat:-22.295264, lng:-46.972014, rota:2, tipo:"Industrial"  },
-  { id:5,  nome:"HFM Logística",           cidade:"Mogi Guaçu", lat:-22.306621, lng:-46.967074, rota:2, tipo:"Industrial"  },
-  { id:6,  nome:"CRK Baseio",              cidade:"Mogi Guaçu", lat:-22.326693, lng:-46.960720, rota:2, tipo:"Industrial"  },
-  { id:7,  nome:"Portal das Hadassas",     cidade:"Mogi Guaçu", lat:-22.359704, lng:-46.961635, rota:1, tipo:"Residencial" },
-  { id:8,  nome:"Portal das Zinias",       cidade:"Mogi Guaçu", lat:-22.360438, lng:-46.961302, rota:1, tipo:"Residencial" },
-  { id:9,  nome:"Clube Oregon",            cidade:"Mogi Guaçu", lat:-22.364873, lng:-46.956757, rota:1, tipo:"Residencial" },
-  { id:10, nome:"Reserva Central",         cidade:"Mogi Guaçu", lat:-22.371433, lng:-46.950728, rota:1, tipo:"Residencial" },
-  { id:11, nome:"Reserva do Lago",         cidade:"Mogi Guaçu", lat:-22.357025, lng:-46.910385, rota:2, tipo:"Residencial" },
-  { id:12, nome:"Residencial San Remo",    cidade:"Mogi Guaçu", lat:-22.362256, lng:-46.933986, rota:2, tipo:"Residencial" },
-  { id:13, nome:"W Park",                  cidade:"Mogi Mirim", lat:-22.445305, lng:-47.020787, rota:3, tipo:"Industrial"  },
-  { id:14, nome:"Irmãos Davoli",           cidade:"Mogi Mirim", lat:-22.462016, lng:-46.982527, rota:3, tipo:"Comercial"   },
-  { id:15, nome:"Fazenda Paineiras",       cidade:"Mogi Mirim", lat:-22.464066, lng:-46.959464, rota:3, tipo:"Residencial" }
+  { id:1,  nome:"Residencial Vale Verde",  cidade:"Mogi Guaçu", lat:-22.378214, lng:-46.94969,  rota:1, tipo:"Residencial", endereco:"" },
+  { id:2,  nome:"Morro Vermelho II",       cidade:"Mogi Guaçu", lat:-22.407241, lng:-46.941305, rota:1, tipo:"Residencial", endereco:"" },
+  { id:3,  nome:"Jardim da Colina",        cidade:"Mogi Mirim", lat:-22.431314, lng:-46.978112, rota:3, tipo:"Residencial", endereco:"" },
+  { id:4,  nome:"Icobit Brasil",           cidade:"Mogi Guaçu", lat:-22.295264, lng:-46.972014, rota:2, tipo:"Industrial",  endereco:"" },
+  { id:5,  nome:"HFM Logística",           cidade:"Mogi Guaçu", lat:-22.306621, lng:-46.967074, rota:2, tipo:"Industrial",  endereco:"" },
+  { id:6,  nome:"CRK Baseio",              cidade:"Mogi Guaçu", lat:-22.326693, lng:-46.960720, rota:2, tipo:"Industrial",  endereco:"" },
+  { id:7,  nome:"Portal das Hadassas",     cidade:"Mogi Guaçu", lat:-22.359704, lng:-46.961635, rota:1, tipo:"Residencial", endereco:"" },
+  { id:8,  nome:"Portal das Zinias",       cidade:"Mogi Guaçu", lat:-22.360438, lng:-46.961302, rota:1, tipo:"Residencial", endereco:"" },
+  { id:9,  nome:"Clube Oregon",            cidade:"Mogi Guaçu", lat:-22.364873, lng:-46.956757, rota:1, tipo:"Residencial", endereco:"" },
+  { id:10, nome:"Reserva Central",         cidade:"Mogi Guaçu", lat:-22.371433, lng:-46.950728, rota:1, tipo:"Residencial", endereco:"" },
+  { id:11, nome:"Reserva do Lago",         cidade:"Mogi Guaçu", lat:-22.357025, lng:-46.910385, rota:2, tipo:"Residencial", endereco:"" },
+  { id:12, nome:"Residencial San Remo",    cidade:"Mogi Guaçu", lat:-22.362256, lng:-46.933986, rota:2, tipo:"Residencial", endereco:"" },
+  { id:13, nome:"W Park",                  cidade:"Mogi Mirim", lat:-22.445305, lng:-47.020787, rota:3, tipo:"Industrial",  endereco:"" },
+  { id:14, nome:"Irmãos Davoli",           cidade:"Mogi Mirim", lat:-22.462016, lng:-46.982527, rota:3, tipo:"Comercial",   endereco:"" },
+  { id:15, nome:"Fazenda Paineiras",       cidade:"Mogi Mirim", lat:-22.464066, lng:-46.959464, rota:3, tipo:"Residencial", endereco:"" }
 ];
 
 var ROTAS = [
@@ -1486,7 +1486,7 @@ function renderSidebar() {
       '<div class="posto-badge" style="background:'+cor+'">'+posto.id+'</div>' +
       '<div class="posto-info">' +
         '<div class="posto-name">'+posto.nome+(isCustom(posto)?'<span style="color:var(--accent);font-size:9px;margin-left:4px">★</span>':'')+'</div>' +
-        '<div class="posto-city">'+posto.cidade+' · '+posto.tipo+'</div>' +
+        '<div class="posto-city">'+posto.cidade+' · '+posto.tipo+(posto.endereco?'<br><span style="font-size:10px;color:var(--muted)">'+posto.endereco+'</span>':'')+'</div>' +
       '</div>' +
       '<div class="posto-rota-tag" style="background:'+corBg+';color:'+cor+';border-color:'+cor+'">'+rotaNome+'</div>' +
     '</div>';
@@ -1647,13 +1647,57 @@ function renderRotasLegenda() {
   document.getElementById('rotasLegenda').innerHTML = html;
 }
 
+// Normaliza string: remove acentos, pontuação, letras maiúsculas
+function _normalizar(s) {
+  return (s||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9 ]/g,' ')
+    .replace(/\s+/g,' ').trim();
+}
+// Extrai tokens relevantes de um endereço completo para busca fuzzy
+function _tokensEndereco(s) {
+  var norm = _normalizar(s);
+  // Remove prefixos comuns de logradouro
+  norm = norm.replace(/\b(rua|r|av|avenida|pca|praca|rod|rodovia|al|alameda|est|estrada|tv|travessa|largo|lgo|via)\b/g,'');
+  // Remove CEP (8 dígitos com ou sem traço)
+  norm = norm.replace(/\b\d{5}[-]?\d{3}\b/g,'');
+  // Remove números isolados
+  norm = norm.replace(/\b\d+\b/g,' ');
+  return norm.replace(/\s+/g,' ').trim().split(' ').filter(function(t){ return t.length > 2; });
+}
+// Score de correspondência entre busca e posto
+function _scorePosto(p, busca) {
+  var normBusca = _normalizar(busca);
+  var tokens = _tokensEndereco(busca);
+  var campos = [
+    _normalizar(p.nome),
+    _normalizar(p.cidade),
+    _normalizar(p.tipo),
+    _normalizar(p.endereco || '')
+  ];
+  var textoCompleto = campos.join(' ');
+  // Correspondência direta
+  if(textoCompleto.includes(normBusca)) return 100;
+  // Score por tokens
+  var matches = tokens.filter(function(t){ return textoCompleto.includes(t); }).length;
+  if(!tokens.length) return 0;
+  return Math.round((matches / tokens.length) * 90);
+}
+
 function renderPostosList() {
-  var busca = (document.getElementById('buscaPosto').value || '').toLowerCase();
+  var busca = (document.getElementById('buscaPosto').value || '').trim();
   var tbody = document.getElementById('postosTableBody');
   var html = '';
-  var filtered = POSTOS.filter(function(p){
-    return !busca || p.nome.toLowerCase().includes(busca) || p.cidade.toLowerCase().includes(busca) || p.tipo.toLowerCase().includes(busca);
-  });
+  var filtered;
+  if(!busca) {
+    filtered = POSTOS.slice();
+  } else {
+    // Filtra postos com score >= 40% e ordena por relevância
+    filtered = POSTOS.map(function(p){ return { p:p, score:_scorePosto(p, busca) }; })
+      .filter(function(x){ return x.score >= 40; })
+      .sort(function(a,b){ return b.score - a.score; })
+      .map(function(x){ return x.p; });
+  }
   if(!filtered.length) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">Nenhum posto encontrado.</td></tr>';
     return;
@@ -1663,7 +1707,7 @@ function renderPostosList() {
     var custom = isCustom(p);
     html += '<tr>' +
       '<td><div class="posto-badge" style="background:'+(rota?rota.cor:'#64748b')+';width:24px;height:24px;font-size:10px">'+p.id+'</div></td>' +
-      '<td><strong>'+p.nome+'</strong>'+(custom?'<span class="badge-custom" style="margin-left:6px">★ Custom</span>':'')+'</td>' +
+      '<td><strong>'+p.nome+'</strong>'+(custom?'<span class="badge-custom" style="margin-left:6px">★ Custom</span>':'')+'<br>'+(p.endereco?'<span style="font-size:10px;color:var(--muted)">'+p.endereco+'</span>':'')+'</td>' +
       '<td>'+p.cidade+'</td>' +
       '<td><span class="tag-tipo" style="background:'+(rota?rota.corBg:'rgba(100,116,139,0.1)')+';color:'+(rota?rota.cor:'#64748b')+'">'+p.tipo+'</span></td>' +
       '<td>'+(rota?'<span style="color:'+rota.cor+';font-weight:600;font-size:12px">'+rota.nome+'</span>':'—')+'</td>' +
@@ -1696,11 +1740,13 @@ function salvarPosto() {
     // Editar posto custom existente
     var idx = POSTOS_CUSTOM.findIndex(function(p){ return p.id === parseInt(editId); });
     if(idx >= 0) {
-      POSTOS_CUSTOM[idx] = { id:parseInt(editId), nome:nome, cidade:cidade, tipo:tipo, rota:rota, lat:lat, lng:lng };
+      var endereco_val = document.getElementById('pEndereco') ? document.getElementById('pEndereco').value.trim() : '';
+      POSTOS_CUSTOM[idx] = { id:parseInt(editId), nome:nome, cidade:cidade, tipo:tipo, rota:rota, lat:lat, lng:lng, endereco:endereco_val };
     }
     showToast('✅ Posto atualizado!');
   } else {
-    var novo = { id:nextPostoId(), nome:nome, cidade:cidade, tipo:tipo, rota:rota, lat:lat, lng:lng };
+    var endereco_val = document.getElementById('pEndereco') ? document.getElementById('pEndereco').value.trim() : '';
+    var novo = { id:nextPostoId(), nome:nome, cidade:cidade, tipo:tipo, rota:rota, lat:lat, lng:lng, endereco:endereco_val };
     POSTOS_CUSTOM.push(novo);
     // Adicionar à rota se não existir
     var rotaObj = ROTAS.find(function(r){ return r.id === rota; });
@@ -1733,6 +1779,7 @@ function editarPosto(id) {
   document.getElementById('pRota').value = p.rota;
   document.getElementById('pLat').value = p.lat;
   document.getElementById('pLng').value = p.lng;
+  document.getElementById('pEndereco').value = p.endereco || '';
   document.getElementById('formCardTitle').textContent = 'Editar Posto #'+id;
   document.getElementById('btnCancelarEdicao').style.display = '';
   document.getElementById('panel-postos').scrollTo(0,0);
