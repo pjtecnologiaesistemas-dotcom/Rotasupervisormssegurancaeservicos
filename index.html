@@ -817,6 +817,7 @@
   <div class="tab" onclick="showTab('checklist',this)" role="button" tabindex="0">✅ Checklist</div>
   <div class="tab" onclick="showTab('historico',this)" role="button" tabindex="0">📋 Histórico</div>
   <div class="tab" onclick="showTab('banco',this)" role="button" tabindex="0">🗃️ Banco</div>
+  <div class="tab" onclick="showTab('relatorios',this)" role="button" tabindex="0">📊 Relatórios</div>
 </div>
 
 <!-- ===== MAPA ===== -->
@@ -1174,6 +1175,82 @@
           <button class="btn btn-primary" onclick="adicionarSuperv()" style="padding:9px 16px;white-space:nowrap">＋ Adicionar</button>
         </div>
         <div class="db-list" id="supervList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== RELATÓRIOS ===== -->
+<div id="panel-relatorios" class="panel">
+  <div class="container">
+    <div class="section-subtitle">
+      <h2 style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:700">📊 Relatórios</h2>
+    </div>
+    <!-- Filtros -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin-bottom:20px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">🔎 Filtros do Relatório</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;align-items:end">
+        <div>
+          <label style="display:block;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">Supervisor</label>
+          <select id="relFiltroSuperv" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">Colaborador</label>
+          <select id="relFiltroColab" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">Posto</label>
+          <select id="relFiltroPosto" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">Data Início</label>
+          <input type="date" id="relFiltroDataIni" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">Data Fim</label>
+          <input type="date" id="relFiltroDataFim" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-family:Barlow,sans-serif;font-size:13px">
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-end;padding-bottom:1px">
+          <button class="btn btn-primary" onclick="aplicarFiltrosRelatorio()" style="flex:1">🔍 Filtrar</button>
+          <button class="btn btn-secondary" onclick="limparFiltrosRelatorio()" style="padding:9px 12px" title="Limpar filtros">✕</button>
+        </div>
+      </div>
+    </div>
+    <!-- Cards de resumo -->
+    <div id="relSummaryCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px"></div>
+    <!-- Botões de exportação -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+      <button class="btn" onclick="exportarRelatorioPDF()" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;display:flex;align-items:center;gap:7px;font-size:14px">
+        <span style="font-size:18px">📄</span> Imprimir / Salvar PDF
+      </button>
+      <button class="btn" onclick="exportarRelatorioExcel()" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;display:flex;align-items:center;gap:7px;font-size:14px">
+        <span style="font-size:18px">📊</span> Exportar Excel (.csv)
+      </button>
+      <button class="btn btn-secondary" onclick="renderRelatorio()" style="display:flex;align-items:center;gap:7px">🔄 Atualizar</button>
+    </div>
+    <!-- Tabela -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+      <div style="padding:12px 18px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:space-between">
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700">📋 Visitas Registradas</span>
+        <span id="relTotalLabel" style="font-size:12px;color:var(--muted)">0 registros</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table id="relatorioTable" style="width:100%;border-collapse:collapse">
+          <thead><tr>
+            <th style="background:var(--surface2);padding:10px 14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">#</th>
+            <th style="background:var(--surface2);padding:10px 14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">Data / Hora</th>
+            <th style="background:var(--surface2);padding:10px 14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">Posto</th>
+            <th style="background:var(--surface2);padding:10px 14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">Cidade</th>
+            <th style="background:var(--surface2);padding:10px 14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">Supervisor</th>
+            <th style="background:var(--surface2);padding:10px 14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">Colaborador</th>
+            <th style="background:var(--surface2);padding:10px 14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">Turno</th>
+            <th style="background:var(--surface2);padding:10px 14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">Progresso</th>
+            <th style="background:var(--surface2);padding:10px 14px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">Status</th>
+          </tr></thead>
+          <tbody id="relatorioBody">
+            <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--muted)">Nenhuma visita encontrada.</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -3021,7 +3098,7 @@ function limparChecklist() {
   var fill=document.getElementById('progressFill'); if(fill) fill.style.width='0%';
 }
 
-function imprimirChecklist() { window.print(); }
+function imprimirChecklist() { abrirChecklistPDF(); }
 
 // ================================================================
 // HISTÓRICO
@@ -3108,11 +3185,14 @@ function showTab(tab, el) {
     renderBancoDados();
     renderSupervisorAtivoSelect();
   }
+  if(tab==='relatorios') {
+    renderRelatorio();
+  }
 }
 
 function showTabByName(tab) {
   var tabs = document.querySelectorAll('.tab');
-  var tabMap = { 'mapa':0,'rotas':1,'postos':2,'ia':3,'checklist':4,'historico':5,'banco':6 };
+  var tabMap = { 'mapa':0,'rotas':1,'postos':2,'ia':3,'checklist':4,'historico':5,'banco':6,'relatorios':7 };
   var idx = tabMap[tab];
   if(idx !== undefined && tabs[idx]) showTab(tab, tabs[idx]);
 }
@@ -3615,5 +3695,291 @@ function atualizarDiagnostico() {
 }
 </script>
 
+<script>
+// ================================================================
+// CHECKLIST PDF — abre janela formatada para impressão
+// ================================================================
+function abrirChecklistPDF() {
+  var postoId = parseInt(document.getElementById('postosSelect').value);
+  if (!postoId) { showToast('Selecione um posto primeiro.', 'error'); return; }
+  var posto = getPostoById(postoId);
+  var rota = ROTAS.find(function(r) { return r.id === posto.rota; });
+  var supervisor  = (document.getElementById('supervInput')  || {}).value || '';
+  var colaborador = (document.getElementById('colabInput')   || {}).value || '';
+  var data        = (document.getElementById('dataInput')    || {}).value || '';
+  var turno       = (document.getElementById('turnoInput')   || {}).value || '';
+  var obs         = (document.getElementById('obsInput')     || {}).value || '';
+
+  var total = 0, checked = 0, itens = [];
+  document.querySelectorAll('.check-item').forEach(function(row) {
+    var cb  = row.querySelector('input[type=checkbox]');
+    var lbl = row.querySelector('label');
+    var sel = row.querySelector('select');
+    total++;
+    if (cb && cb.checked) checked++;
+    itens.push({ label: lbl ? lbl.textContent : '', ok: cb && cb.checked, status: sel ? sel.value : 'ok' });
+  });
+  var pct = total ? Math.round((checked / total) * 100) : 0;
+  var dataFmt = data ? new Date(data).toLocaleString('pt-BR') : '\u2014';
+
+  // Agrupar por seção
+  var secoes = Object.keys(CHECKLIST_ITEMS);
+  var grupos = [];
+  var idx = 0;
+  secoes.forEach(function(s) {
+    var g = [];
+    CHECKLIST_ITEMS[s].forEach(function() { g.push(itens[idx] || { label: '\u2014', ok: false, status: 'ok' }); idx++; });
+    grupos.push({ secao: s, itens: g });
+  });
+
+  var tbRows = grupos.map(function(g) {
+    var headerRow = '<tr style="background:#dce8f5"><td colspan="2" style="padding:6px 10px;font-weight:700;font-size:12px;text-transform:uppercase;color:#1e3a5f;border:1px solid #aec6e0">\u25c6 ' + g.secao + '</td></tr>';
+    var itemRows = g.itens.map(function(it) {
+      var bg = it.status === 'nok' ? '#fee2e2' : it.ok ? '#d1fae5' : '#fff';
+      var badge = it.status === 'nok' ? '<span style="color:#dc2626;font-weight:700">\u2717 N\u00e3o OK</span>'
+                : it.ok              ? '<span style="color:#059669;font-weight:700">\u2713 OK</span>'
+                :                      '<span style="color:#6b7280">\u2014 N/A</span>';
+      return '<tr style="background:' + bg + '"><td style="padding:6px 10px;font-size:12px;border:1px solid #c8d5e8">' + it.label + '</td>' +
+             '<td style="padding:6px 10px;font-size:12px;text-align:center;border:1px solid #c8d5e8;white-space:nowrap">' + badge + '</td></tr>';
+    }).join('');
+    return headerRow + itemRows;
+  }).join('');
+
+  var obsHtml = obs
+    ? '<div style="background:#fffbeb;border:1px solid #fbbf24;border-radius:6px;padding:12px;margin-top:12px"><strong>Observa\u00e7\u00f5es / Ocorr\u00eancias:</strong><br><span style="font-size:12px">' + obs + '</span></div>'
+    : '';
+
+  var html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Checklist \u2014 ' + posto.nome + '</title>' +
+    '<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:13px;color:#1a1a2e;padding:20px}' +
+    '.hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #f59e0b;padding-bottom:12px;margin-bottom:16px}' +
+    '.logo{background:#f59e0b;color:#000;font-weight:800;font-size:18px;padding:6px 12px;border-radius:6px;letter-spacing:1px}' +
+    '.meta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;background:#f0f4ff;border:1px solid #c8d5e8;border-radius:8px;padding:12px;margin-bottom:14px}' +
+    '.mi label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6b7280;margin-bottom:3px}' +
+    '.mi span{font-size:13px;font-weight:600;color:#1a1a2e}' +
+    '.pb{height:10px;background:#e5e7eb;border-radius:5px;overflow:hidden;margin:10px 0 4px}' +
+    '.pf{height:100%;background:#f59e0b;border-radius:5px}' +
+    'table{width:100%;border-collapse:collapse;margin-bottom:14px}' +
+    'th{background:#1e3a5f;color:#fff;padding:8px 10px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px}' +
+    '.noprint{margin-top:20px;text-align:center}' +
+    '@media print{@page{margin:15mm}.noprint{display:none!important}}' +
+    '</style></head><body>' +
+    '<div class="hdr"><div class="logo">MS</div>' +
+    '<div style="text-align:center"><div style="font-size:18px;font-weight:800;color:#1e3a5f">Grupo M.S Seguran\u00e7a</div><div style="font-size:13px;color:#6b7280">Relat\u00f3rio de Checklist de Visita</div></div>' +
+    '<div style="text-align:right;font-size:11px;color:#6b7280">Emitido em:<br><strong>' + new Date().toLocaleString('pt-BR') + '</strong></div></div>' +
+    '<div class="meta">' +
+    '<div class="mi"><label>Posto</label><span>' + posto.nome + '</span></div>' +
+    '<div class="mi"><label>Cidade</label><span>' + posto.cidade + '</span></div>' +
+    '<div class="mi"><label>Rota</label><span>' + (rota ? rota.nome : '\u2014') + '</span></div>' +
+    '<div class="mi"><label>Supervisor</label><span>' + (supervisor || '\u2014') + '</span></div>' +
+    '<div class="mi"><label>Colaborador no Posto</label><span>' + (colaborador || '\u2014') + '</span></div>' +
+    '<div class="mi"><label>Data / Hora</label><span>' + dataFmt + '</span></div>' +
+    '<div class="mi"><label>Turno</label><span>' + (turno || '\u2014') + '</span></div>' +
+    '<div class="mi"><label>Progresso</label><span>' + checked + '/' + total + ' itens (' + pct + '%)</span></div>' +
+    '<div class="mi"><label>Status Geral</label><span style="color:' + (pct >= 90 ? '#059669' : '#d97706') + '">' + (pct >= 90 ? '\u2705 Completo' : '\u26a0\ufe0f Pendente') + '</span></div>' +
+    '</div>' +
+    '<div class="pb"><div class="pf" style="width:' + pct + '%"></div></div>' +
+    '<p style="font-size:11px;color:#6b7280;margin-bottom:14px;text-align:right">' + pct + '% conclu\u00eddo</p>' +
+    '<table><thead><tr><th>Item de Verifica\u00e7\u00e3o</th><th style="width:110px;text-align:center">Resultado</th></tr></thead><tbody>' + tbRows + '</tbody></table>' +
+    obsHtml +
+    '<div class="noprint"><button onclick="window.print()" style="background:#f59e0b;border:none;color:#000;font-weight:700;padding:10px 28px;border-radius:8px;font-size:15px;cursor:pointer;margin-right:10px">\ud83d\udda8\ufe0f Imprimir / Salvar PDF</button>' +
+    '<button onclick="window.close()" style="background:#e5e7eb;border:none;font-weight:600;padding:10px 18px;border-radius:8px;font-size:14px;cursor:pointer">Fechar</button></div>' +
+    '</body></html>';
+
+  var win = window.open('', '_blank', 'width=900,height=720');
+  win.document.open(); win.document.write(html); win.document.close();
+  setTimeout(function() { win.focus(); }, 300);
+}
+
+// ================================================================
+// RELATÓRIOS — filtros, render, PDF, Excel
+// ================================================================
+var _relatorioFiltrado = [];
+
+function popularFiltrosRelatorio() {
+  var historico = (window._visitasDB && window._visitasDB.length)
+    ? window._visitasDB
+    : JSON.parse(localStorage.getItem('ms_visitas') || '[]');
+  var supervisores = Array.from(new Set(historico.map(function(v) { return v.supervisor || ''; }).filter(Boolean))).sort();
+  var colaboradores = Array.from(new Set(historico.map(function(v) { return v.colaborador || ''; }).filter(Boolean))).sort();
+  var postos = Array.from(new Set(historico.map(function(v) { return v.postoNome || ''; }).filter(Boolean))).sort();
+  function fillSel(id, arr) {
+    var sel = document.getElementById(id); if (!sel) return;
+    var val = sel.value;
+    sel.innerHTML = '<option value="">Todos</option>';
+    arr.forEach(function(x) { sel.innerHTML += '<option value="' + x + '">' + x + '</option>'; });
+    if (val) sel.value = val;
+  }
+  fillSel('relFiltroSuperv', supervisores);
+  fillSel('relFiltroColab', colaboradores);
+  fillSel('relFiltroPosto', postos);
+}
+
+function aplicarFiltrosRelatorio() { renderRelatorio(); }
+
+function limparFiltrosRelatorio() {
+  ['relFiltroSuperv','relFiltroColab','relFiltroPosto','relFiltroDataIni','relFiltroDataFim'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  renderRelatorio();
+}
+
+function renderRelatorio() {
+  popularFiltrosRelatorio();
+  var historico = (window._visitasDB && window._visitasDB.length)
+    ? window._visitasDB
+    : JSON.parse(localStorage.getItem('ms_visitas') || '[]');
+
+  var fS  = (document.getElementById('relFiltroSuperv')  || {}).value || '';
+  var fC  = (document.getElementById('relFiltroColab')   || {}).value || '';
+  var fP  = (document.getElementById('relFiltroPosto')   || {}).value || '';
+  var fI  = (document.getElementById('relFiltroDataIni') || {}).value || '';
+  var fF  = (document.getElementById('relFiltroDataFim') || {}).value || '';
+
+  var lista = historico.filter(function(v) {
+    if (fS && v.supervisor  !== fS) return false;
+    if (fC && v.colaborador !== fC) return false;
+    if (fP && v.postoNome   !== fP) return false;
+    if (fI && v.data && new Date(v.data) < new Date(fI + 'T00:00:00')) return false;
+    if (fF && v.data && new Date(v.data) > new Date(fF + 'T23:59:59')) return false;
+    return true;
+  });
+  _relatorioFiltrado = lista;
+
+  var total     = lista.length;
+  var completos = lista.filter(function(v) { return v.pct >= 90; }).length;
+  var mediaPct  = total ? Math.round(lista.reduce(function(s, v) { return s + (v.pct || 0); }, 0) / total) : 0;
+
+  function cardHtml(icon, val, lbl, cor) {
+    return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;border-top:3px solid ' + cor + '">' +
+      '<div style="font-size:22px;margin-bottom:4px">' + icon + '</div>' +
+      '<div style="font-family:Barlow Condensed,sans-serif;font-size:28px;font-weight:800;color:' + cor + ';line-height:1">' + val + '</div>' +
+      '<div style="font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.5px">' + lbl + '</div></div>';
+  }
+  var cards = document.getElementById('relSummaryCards');
+  if (cards) {
+    cards.innerHTML =
+      cardHtml('📋', total,            'Total de Visitas', '#3b82f6') +
+      cardHtml('✅', completos,         'Completas',        '#10b981') +
+      cardHtml('⚠️', total - completos, 'Pendentes',        '#f59e0b') +
+      cardHtml('📈', mediaPct + '%',    'Média Progresso',  '#8b5cf6');
+  }
+  var lbl = document.getElementById('relTotalLabel');
+  if (lbl) lbl.textContent = total + ' registro' + (total !== 1 ? 's' : '');
+
+  var tbody = document.getElementById('relatorioBody');
+  if (!tbody) return;
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--muted)">Nenhuma visita encontrada.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = lista.map(function(v, i) {
+    var dt = v.data ? new Date(v.data).toLocaleString('pt-BR') : '\u2014';
+    var status = v.pct >= 90
+      ? '<span class="badge badge-ok">Completo</span>'
+      : '<span class="badge badge-pend">Pendente</span>';
+    var bar = '<div style="display:flex;align-items:center;gap:6px">' +
+      '<div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">' +
+        '<div style="height:100%;background:var(--accent);width:' + (v.pct || 0) + '%"></div></div>' +
+      '<span style="font-size:11px;color:var(--muted)">' + (v.pct || 0) + '%</span></div>';
+    return '<tr>' +
+      '<td style="padding:10px 14px;font-size:12px;border-bottom:1px solid var(--border);color:var(--muted)">' + (i + 1) + '</td>' +
+      '<td style="padding:10px 14px;font-size:12px;border-bottom:1px solid var(--border);white-space:nowrap">' + dt + '</td>' +
+      '<td style="padding:10px 14px;font-size:12px;border-bottom:1px solid var(--border)"><strong>' + (v.postoNome || '\u2014') + '</strong></td>' +
+      '<td style="padding:10px 14px;font-size:12px;border-bottom:1px solid var(--border)">' + (v.cidade || '\u2014') + '</td>' +
+      '<td style="padding:10px 14px;font-size:12px;border-bottom:1px solid var(--border);white-space:nowrap">👤 ' + (v.supervisor || '\u2014') + '</td>' +
+      '<td style="padding:10px 14px;font-size:12px;border-bottom:1px solid var(--border);white-space:nowrap">👷 ' + (v.colaborador || '\u2014') + '</td>' +
+      '<td style="padding:10px 14px;font-size:12px;border-bottom:1px solid var(--border);white-space:nowrap">' + (v.turno || '\u2014') + '</td>' +
+      '<td style="padding:10px 14px;font-size:12px;border-bottom:1px solid var(--border);min-width:120px">' + bar + '</td>' +
+      '<td style="padding:10px 14px;font-size:12px;border-bottom:1px solid var(--border)">' + status + '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+// ── PDF Relatório ──
+function exportarRelatorioPDF() {
+  var lista = _relatorioFiltrado;
+  if (!lista.length) { showToast('Nenhum dado para exportar.', 'error'); return; }
+
+  var total     = lista.length;
+  var completos = lista.filter(function(v) { return v.pct >= 90; }).length;
+  var mediaPct  = Math.round(lista.reduce(function(s, v) { return s + (v.pct || 0); }, 0) / total);
+
+  var tbRows = lista.map(function(v, i) {
+    var dt = v.data ? new Date(v.data).toLocaleString('pt-BR') : '\u2014';
+    var cor = v.pct >= 90 ? '#059669' : '#d97706';
+    var st  = v.pct >= 90 ? 'Completo' : 'Pendente';
+    return '<tr style="background:' + (i % 2 === 0 ? '#fff' : '#f8faff') + '">' +
+      '<td style="padding:6px 10px;border:1px solid #c8d5e8;font-size:11px;color:#6b7280">' + (i + 1) + '</td>' +
+      '<td style="padding:6px 10px;border:1px solid #c8d5e8;font-size:11px;white-space:nowrap">' + dt + '</td>' +
+      '<td style="padding:6px 10px;border:1px solid #c8d5e8;font-size:11px"><strong>' + (v.postoNome || '\u2014') + '</strong></td>' +
+      '<td style="padding:6px 10px;border:1px solid #c8d5e8;font-size:11px">' + (v.cidade || '\u2014') + '</td>' +
+      '<td style="padding:6px 10px;border:1px solid #c8d5e8;font-size:11px">' + (v.supervisor || '\u2014') + '</td>' +
+      '<td style="padding:6px 10px;border:1px solid #c8d5e8;font-size:11px">' + (v.colaborador || '\u2014') + '</td>' +
+      '<td style="padding:6px 10px;border:1px solid #c8d5e8;font-size:11px">' + (v.turno || '\u2014') + '</td>' +
+      '<td style="padding:6px 10px;border:1px solid #c8d5e8;font-size:11px;text-align:center">' + (v.pct || 0) + '%</td>' +
+      '<td style="padding:6px 10px;border:1px solid #c8d5e8;font-size:11px;font-weight:700;color:' + cor + '">' + st + '</td>' +
+    '</tr>';
+  }).join('');
+
+  var html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Relat\u00f3rio de Visitas</title>' +
+    '<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:12px;color:#1a1a2e;padding:20px}' +
+    '.hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #f59e0b;padding-bottom:12px;margin-bottom:16px}' +
+    '.logo{background:#f59e0b;color:#000;font-weight:800;font-size:18px;padding:6px 12px;border-radius:6px;letter-spacing:1px}' +
+    '.sum{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}' +
+    '.sc{background:#f0f4ff;border:1px solid #c8d5e8;border-radius:8px;padding:10px 14px;text-align:center}' +
+    '.sv{font-size:22px;font-weight:800;color:#1e3a5f}.sl{font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px}' +
+    'table{width:100%;border-collapse:collapse}thead tr{background:#1e3a5f;color:#fff}' +
+    'th{padding:8px 10px;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;font-size:10px;white-space:nowrap}' +
+    '.noprint{margin-top:16px;text-align:center}' +
+    '@media print{@page{size:A4 landscape;margin:10mm}.noprint{display:none!important}}' +
+    '</style></head><body>' +
+    '<div class="hdr"><div class="logo">MS</div>' +
+    '<div style="text-align:center"><div style="font-size:18px;font-weight:800;color:#1e3a5f">Grupo M.S Seguran\u00e7a</div>' +
+    '<div style="font-size:13px;color:#6b7280">Relat\u00f3rio de Visitas de Supervis\u00e3o</div></div>' +
+    '<div style="text-align:right;font-size:11px;color:#6b7280">Emitido em:<br><strong>' + new Date().toLocaleString('pt-BR') + '</strong></div></div>' +
+    '<div class="sum">' +
+    '<div class="sc"><div class="sv">' + total + '</div><div class="sl">Total de Visitas</div></div>' +
+    '<div class="sc"><div class="sv" style="color:#059669">' + completos + '</div><div class="sl">Completas</div></div>' +
+    '<div class="sc"><div class="sv" style="color:#d97706">' + (total - completos) + '</div><div class="sl">Pendentes</div></div>' +
+    '<div class="sc"><div class="sv" style="color:#7c3aed">' + mediaPct + '%</div><div class="sl">M\u00e9dia Progresso</div></div>' +
+    '</div>' +
+    '<table><thead><tr><th>#</th><th>Data / Hora</th><th>Posto</th><th>Cidade</th><th>Supervisor</th><th>Colaborador</th><th>Turno</th><th>%</th><th>Status</th></tr></thead>' +
+    '<tbody>' + tbRows + '</tbody></table>' +
+    '<div class="noprint"><button onclick="window.print()" style="background:#f59e0b;border:none;color:#000;font-weight:700;padding:10px 28px;border-radius:8px;font-size:15px;cursor:pointer;margin-right:10px">\ud83d\udda8\ufe0f Imprimir / Salvar PDF</button>' +
+    '<button onclick="window.close()" style="background:#e5e7eb;border:none;font-weight:600;padding:10px 18px;border-radius:8px;font-size:14px;cursor:pointer">Fechar</button></div>' +
+    '</body></html>';
+
+  var win = window.open('', '_blank', 'width=1100,height=750');
+  win.document.open(); win.document.write(html); win.document.close();
+  setTimeout(function() { win.focus(); }, 300);
+}
+
+// ── Excel / CSV ──
+function exportarRelatorioExcel() {
+  var lista = _relatorioFiltrado;
+  if (!lista.length) { showToast('Nenhum dado para exportar.', 'error'); return; }
+
+  var bom = '\uFEFF';
+  var header = ['"#"','"Data/Hora"','"Posto"','"Cidade"','"Supervisor"','"Colaborador"','"Turno"','"Progresso (%)"','"Status"','"Observacoes"'].join(';');
+  var rows = lista.map(function(v, i) {
+    var dt = v.data ? new Date(v.data).toLocaleString('pt-BR') : '';
+    var st = v.pct >= 90 ? 'Completo' : 'Pendente';
+    return [i + 1, dt, v.postoNome || '', v.cidade || '', v.supervisor || '', v.colaborador || '',
+            v.turno || '', v.pct || 0, st, (v.obs || '').replace(/\n/g, ' ').replace(/;/g, ',')]
+      .map(function(c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(';');
+  });
+
+  var csv = bom + header + '\n' + rows.join('\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'relatorio_visitas_ms_' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('\u2705 Exportado com sucesso!');
+}
+</script>
 </body>
 </html>
