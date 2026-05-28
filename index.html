@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Supervisor de Rotas v12 — Grupo M.S Segurança</title>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500;600&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #080c17;
@@ -43,15 +43,37 @@
   }
   .logo { display:flex; align-items:center; gap:10px; }
   .logo-icon {
-    width:34px; height:34px;
-    background:linear-gradient(135deg,#f59e0b,#d97706);
-    border-radius:8px;
+    width:34px; height:38px;
     display:flex; align-items:center; justify-content:center;
-    font-family:'Barlow Condensed',sans-serif; font-weight:800; color:#000; font-size:15px;
-    box-shadow:0 0 12px rgba(245,158,11,0.35);
+    position:relative; flex-shrink:0;
   }
+  .logo-icon svg { width:100%; height:100%; filter:drop-shadow(0 0 6px rgba(0,200,248,.45)); }
+  @keyframes pjHexPulse {
+    0%,100% { filter:drop-shadow(0 0 5px rgba(0,200,248,.4)); }
+    50%      { filter:drop-shadow(0 0 12px rgba(0,234,255,.8)); }
+  }
+  .logo-icon svg { animation:pjHexPulse 3s ease-in-out infinite; }
   .logo-text { font-family:'Barlow Condensed',sans-serif; font-size:19px; font-weight:700; letter-spacing:1px; }
   .logo-text span { color:var(--accent); }
+  /* PJ Tecnologia branding */
+  .pj-powered {
+    display:flex; align-items:center; gap:4px;
+    font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600;
+    letter-spacing:1.5px; text-transform:uppercase;
+    color:rgba(0,200,248,.5);
+    border-left:1px solid rgba(0,200,248,.18); padding-left:10px; margin-left:2px;
+  }
+  .pj-powered b { color:rgba(0,234,255,.8); font-weight:800; }
+  @media(max-width:520px){ .pj-powered { display:none; } }
+  /* Powered by PJ strip no header */
+  .pj-powered {
+    display:flex; align-items:center; gap:5px;
+    font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600;
+    letter-spacing:1.5px; text-transform:uppercase;
+    color:rgba(0,200,248,.55);
+    border-left:1px solid rgba(0,200,248,.2); padding-left:10px; margin-left:4px;
+  }
+  .pj-powered b { color:rgba(0,234,255,.85); }
   .header-right { display:flex; align-items:center; gap:10px; }
   .header-date { font-size:12px; color:var(--muted); display:none; }
   @media(min-width:600px){ .header-date { display:block; } }
@@ -116,37 +138,176 @@
   .map-placeholder { height:calc(100vh - var(--header-h) - var(--tabs-h)); }
   #map { width:100%; height:100%; border:none; }
 
-  /* ── SIDEBAR ── */
+  /* ── PAINEL EM CAMPO (novo) ── */
   .sidebar {
     position:absolute; top:10px; left:10px; bottom:10px;
-    width:290px; z-index:20;
-    background:rgba(10,16,28,0.97);
+    width:300px; z-index:20;
+    background:rgba(8,12,22,0.97);
     border:1px solid var(--border2);
-    border-radius:12px;
+    border-radius:14px;
     overflow:hidden; display:flex; flex-direction:column;
-    box-shadow:0 8px 32px rgba(0,0,0,0.6);
-    backdrop-filter:blur(10px);
+    box-shadow:0 8px 40px rgba(0,0,0,0.7);
+    backdrop-filter:blur(14px);
+    transition:transform 0.3s cubic-bezier(.22,1,.36,1);
   }
+  .sidebar.collapsed { transform:translateX(-320px); }
+  .sidebar-toggle {
+    position:absolute; top:50%; left:10px; z-index:25;
+    transform:translateY(-50%);
+    width:28px; height:48px; border-radius:0 10px 10px 0;
+    background:rgba(8,12,22,0.97); border:1px solid var(--border2);
+    border-left:none; color:var(--text2); font-size:13px;
+    cursor:pointer; display:none; align-items:center; justify-content:center;
+    box-shadow:3px 0 12px rgba(0,0,0,0.5);
+    transition:background 0.15s;
+  }
+  .sidebar-toggle:hover { background:var(--surface2); color:var(--text); }
+  .sidebar.collapsed + .sidebar-toggle { display:flex; }
+
   .sidebar-header {
-    padding:12px 14px;
+    padding:10px 14px 8px;
     border-bottom:1px solid var(--border);
-    background:linear-gradient(90deg, rgba(245,158,11,0.08), rgba(59,130,246,0.05));
+    background:linear-gradient(90deg, rgba(245,158,11,0.06), rgba(59,130,246,0.04));
     font-family:'Barlow Condensed',sans-serif;
     font-size:13px; font-weight:700; letter-spacing:0.5px;
     color:var(--text);
     display:flex; align-items:center; justify-content:space-between;
+    flex-shrink:0;
   }
-  .sidebar-filters {
-    padding:7px 10px;
+  .sb-close-btn {
+    background:none; border:none; color:var(--muted); cursor:pointer;
+    font-size:16px; padding:2px 4px; border-radius:4px; transition:color 0.15s;
+  }
+  .sb-close-btn:hover { color:var(--text); }
+
+  /* ── Seletor de rota ── */
+  .rota-selector {
+    display:flex; gap:4px; padding:8px 10px;
     border-bottom:1px solid var(--border);
-    display:flex; gap:4px; flex-wrap:wrap;
-    background:var(--surface2);
+    background:var(--surface2); flex-shrink:0; flex-wrap:wrap;
   }
+  .rota-pill {
+    padding:4px 10px; border-radius:20px;
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:11px; font-weight:700; letter-spacing:0.4px;
+    cursor:pointer; border:1px solid; transition:all 0.15s;
+    background:none;
+  }
+  .rota-pill.active { color:#000 !important; }
+
+  /* ── Card do posto ATUAL ── */
+  .posto-atual-card {
+    margin:10px; border-radius:10px; padding:12px;
+    background:linear-gradient(135deg, rgba(245,158,11,0.12), rgba(59,130,246,0.06));
+    border:1px solid rgba(245,158,11,0.4);
+    flex-shrink:0; position:relative; overflow:hidden;
+  }
+  .posto-atual-card::before {
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(135deg,rgba(245,158,11,0.03),transparent);
+    pointer-events:none;
+  }
+  .pac-label {
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:10px; font-weight:700; letter-spacing:2px;
+    text-transform:uppercase; color:var(--accent); margin-bottom:6px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .pac-label::after {
+    content:''; flex:1; height:1px;
+    background:linear-gradient(90deg, rgba(245,158,11,0.3), transparent);
+  }
+  .pac-nome {
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:17px; font-weight:800; color:var(--text);
+    line-height:1.2; margin-bottom:3px;
+  }
+  .pac-meta { font-size:11px; color:var(--muted); margin-bottom:10px; }
+  .pac-btns { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .pac-btn {
+    padding:9px 6px; border-radius:8px; border:none;
+    font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700;
+    cursor:pointer; transition:all 0.15s; letter-spacing:0.3px;
+    display:flex; align-items:center; justify-content:center; gap:4px;
+  }
+  .pac-btn:hover { opacity:0.85; transform:translateY(-1px); }
+  .pac-btn.nav   { background:#1d4ed8; color:#fff; }
+  .pac-btn.check { background:var(--accent); color:#000; }
+  .pac-btn.done  { background:rgba(16,185,129,0.2); color:var(--green); border:1px solid rgba(16,185,129,0.4); grid-column:span 2; }
+
+  /* ── Próximos postos ── */
+  .proximos-header {
+    padding:6px 14px 4px;
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:10px; font-weight:700; letter-spacing:2px;
+    text-transform:uppercase; color:var(--muted);
+    display:flex; align-items:center; justify-content:space-between;
+    flex-shrink:0;
+  }
+  .proximos-list { flex:1; overflow-y:auto; padding:0 10px 10px; }
+  .prox-item {
+    display:flex; align-items:center; gap:9px;
+    padding:8px 10px; margin-bottom:4px;
+    border-radius:9px; background:var(--surface2);
+    border:1px solid var(--border);
+    cursor:pointer; transition:all 0.15s;
+  }
+  .prox-item:hover { background:var(--surface3); border-color:var(--border2); transform:translateX(2px); }
+  .prox-item.visitado { opacity:0.45; }
+  .prox-seq {
+    width:28px; height:28px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:12px; font-weight:800; color:#fff; flex-shrink:0;
+    box-shadow:0 2px 6px rgba(0,0,0,0.4);
+  }
+  .prox-info { flex:1; min-width:0; }
+  .prox-nome { font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .prox-dist { font-size:10px; color:var(--muted); margin-top:1px; }
+  .prox-check {
+    width:26px; height:26px; border-radius:50%; border:1.5px solid;
+    background:none; cursor:pointer; font-size:11px;
+    display:flex; align-items:center; justify-content:center;
+    transition:all 0.15s; flex-shrink:0;
+  }
+  .prox-check:hover { transform:scale(1.15); }
+
+  /* ── Progresso compacto no topo da sidebar ── */
+  .sb-progress {
+    padding:6px 12px;
+    background:var(--surface);
+    border-bottom:1px solid var(--border);
+    flex-shrink:0;
+  }
+  .sb-progress-bar {
+    height:5px; background:var(--border); border-radius:3px; overflow:hidden; margin-bottom:3px;
+  }
+  .sb-progress-fill { height:100%; border-radius:3px; transition:width 0.5s ease; }
+  .sb-progress-label {
+    display:flex; justify-content:space-between;
+    font-size:10px; font-weight:700; letter-spacing:0.3px;
+    font-family:'Barlow Condensed',sans-serif;
+  }
+
+  /* ── Estado vazio / selecionar rota ── */
+  .sb-empty {
+    flex:1; display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    padding:24px; text-align:center; gap:12px;
+  }
+  .sb-empty-icon { font-size:40px; opacity:0.4; }
+  .sb-empty-txt  { font-size:13px; color:var(--muted); line-height:1.6; }
+  .sb-start-btn {
+    width:100%; padding:11px; border:none; border-radius:8px;
+    font-family:'Barlow Condensed',sans-serif;
+    font-size:15px; font-weight:700; letter-spacing:0.5px;
+    cursor:pointer; transition:all 0.15s;
+  }
+  .sb-start-btn:hover { opacity:0.9; transform:translateY(-1px); }
+
   .filter-btn {
-    padding:4px 10px;
-    border-radius:20px; font-size:11px; font-weight:700;
-    cursor:pointer; border:1px solid;
-    transition:all 0.15s; background:none;
+    padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700;
+    cursor:pointer; border:1px solid; transition:all 0.15s; background:none;
     font-family:'Barlow',sans-serif; letter-spacing:0.3px;
   }
   .filter-btn.active { color:#000 !important; }
@@ -188,7 +349,7 @@
 
   /* ── MAP FLOATING CONTROLS ── */
   .map-controls-float {
-    position:absolute; top:10px; left:310px; right:56px;
+    position:absolute; top:10px; left:320px; right:56px;
     z-index:20;
     display:flex; gap:5px; flex-wrap:wrap; align-items:center;
     background:rgba(8,12,23,0.88); backdrop-filter:blur(8px);
@@ -197,7 +358,7 @@
     box-shadow:0 4px 16px rgba(0,0,0,0.4);
   }
   .map-progress-float {
-    position:absolute; bottom:14px; left:310px; right:10px;
+    position:absolute; bottom:14px; left:320px; right:10px;
     z-index:20;
     display:flex; gap:7px; align-items:center; flex-wrap:wrap;
     background:rgba(8,12,23,0.88); backdrop-filter:blur(8px);
@@ -247,10 +408,13 @@
   @media(max-width:900px) {
     .sidebar {
       position:absolute; top:auto; bottom:0; left:0; right:0;
-      width:100%; height:44vh; border-radius:12px 12px 0 0;
+      width:100% !important; height:48vh; border-radius:14px 14px 0 0;
+      transform:none !important;
     }
+    .sidebar.collapsed { transform:translateY(calc(100% - 44px)) !important; }
+    .sidebar-toggle { display:none !important; }
     .map-controls-float { left:10px; top:10px; right:56px; }
-    .map-progress-float { left:10px; bottom:45vh; right:10px; }
+    .map-progress-float { left:10px; bottom:49vh; right:10px; }
     .map-apikey-float { left:10px; top:54px; right:56px; }
   }
 
@@ -796,8 +960,32 @@
 
 <header>
   <div class="logo">
-    <div class="logo-icon">MS</div>
+    <div class="logo-icon">
+      <svg viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="hHexG" x1="0" y1="0" x2="100" y2="110" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#0d3878"/>
+            <stop offset="100%" stop-color="#051225"/>
+          </linearGradient>
+          <linearGradient id="hHexS" x1="0" y1="0" x2="100" y2="110" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#00eaff"/>
+            <stop offset="50%" stop-color="#0088cc"/>
+            <stop offset="100%" stop-color="#00c8f8"/>
+          </linearGradient>
+        </defs>
+        <polygon points="50,4 96,28 96,82 50,106 4,82 4,28" fill="url(#hHexG)" stroke="url(#hHexS)" stroke-width="3"/>
+        <polygon points="50,12 88,33 88,78 50,98 12,78 12,33" fill="none" stroke="rgba(0,200,248,0.2)" stroke-width="1"/>
+        <circle cx="50" cy="4"   r="2.5" fill="#00eaff" opacity=".8"/>
+        <circle cx="96" cy="28"  r="2.5" fill="#00eaff" opacity=".8"/>
+        <circle cx="96" cy="82"  r="2.5" fill="#00eaff" opacity=".8"/>
+        <circle cx="50" cy="106" r="2.5" fill="#00eaff" opacity=".8"/>
+        <circle cx="4"  cy="82"  r="2.5" fill="#00eaff" opacity=".8"/>
+        <circle cx="4"  cy="28"  r="2.5" fill="#00eaff" opacity=".8"/>
+        <text x="50" y="64" text-anchor="middle" font-family="Orbitron,sans-serif" font-size="30" font-weight="900" fill="#eef4ff" letter-spacing="-2">PJ</text>
+      </svg>
+    </div>
     <div class="logo-text">Grupo M.S <span>Segurança</span></div>
+    <div class="pj-powered">by <b>PJ</b>&nbsp;Tecnologia</div>
   </div>
   <div class="header-right">
     <div class="header-date" id="headerDate"></div>
@@ -828,20 +1016,67 @@
       <!-- Mapa ocupa 100% do espaço -->
       <div id="map"></div>
 
-      <!-- Sidebar flutuante (lista de postos) -->
-      <div class="sidebar">
+      <!-- ═══ PAINEL EM CAMPO ═══ -->
+      <div class="sidebar" id="painelEmCampo">
+
+        <!-- Cabeçalho -->
         <div class="sidebar-header">
-          <span id="sidebarCount">📍 — Postos</span>
+          <span style="display:flex;align-items:center;gap:7px">
+            <span id="sbStatusDot" style="width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background 0.4s"></span>
+            <span id="sbStatusLabel" style="font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700">Selecione uma Rota</span>
+          </span>
+          <button class="sb-close-btn" onclick="toggleSidebar()" title="Minimizar painel">◂</button>
         </div>
-        <div class="sidebar-filters">
-          <button class="filter-btn active" id="fbTodos" onclick="filtrarSidebar('todos',this)" style="color:var(--text);border-color:var(--border)">Todos</button>
-          <button class="filter-btn" id="fb1" onclick="filtrarSidebar('1',this)" style="color:#3b82f6;border-color:#3b82f6">Alpha</button>
-          <button class="filter-btn" id="fb2" onclick="filtrarSidebar('2',this)" style="color:#10b981;border-color:#10b981">Beta</button>
-          <button class="filter-btn" id="fb3" onclick="filtrarSidebar('3',this)" style="color:#f59e0b;border-color:#f59e0b">Gamma</button>
-          <button class="filter-btn" id="fb4" onclick="filtrarSidebar('4',this)" style="color:#8b5cf6;border-color:#8b5cf6">Delta</button>
+
+        <!-- Progresso compacto -->
+        <div class="sb-progress" id="sbProgressBar">
+          <div class="sb-progress-bar">
+            <div class="sb-progress-fill" id="sbProgressFill" style="width:0%;background:var(--accent)"></div>
+          </div>
+          <div class="sb-progress-label">
+            <span id="sbProgressTxt" style="color:var(--muted)">0 postos visitados</span>
+            <span id="sbProgressPct" style="color:var(--accent)">0%</span>
+          </div>
         </div>
-        <div id="postosList"></div>
+
+        <!-- Seletor de Rota -->
+        <div class="rota-selector">
+          <button class="rota-pill" id="rp0" onclick="sbSelecionarRota(0)" style="color:var(--text2);border-color:var(--border)">Todos</button>
+          <button class="rota-pill" id="rp1" onclick="sbSelecionarRota(1)" style="color:#3b82f6;border-color:#3b82f6">α Alpha</button>
+          <button class="rota-pill" id="rp2" onclick="sbSelecionarRota(2)" style="color:#10b981;border-color:#10b981">β Beta</button>
+          <button class="rota-pill" id="rp3" onclick="sbSelecionarRota(3)" style="color:#f59e0b;border-color:#f59e0b">γ Gamma</button>
+          <button class="rota-pill" id="rp4" onclick="sbSelecionarRota(4)" style="color:#8b5cf6;border-color:#8b5cf6">δ Delta</button>
+        </div>
+
+        <!-- Card do posto ATUAL -->
+        <div id="postoAtualCard" style="display:none">
+          <div class="posto-atual-card">
+            <div class="pac-label">📍 Posto Atual</div>
+            <div class="pac-nome" id="pacNome">—</div>
+            <div class="pac-meta" id="pacMeta">—</div>
+            <div class="pac-btns">
+              <button class="pac-btn nav" id="pacBtnNav" onclick="sbNavegar()">🧭 Navegar</button>
+              <button class="pac-btn check" id="pacBtnCheck" onclick="sbFazerChecklist()">📋 Vistoria</button>
+              <button class="pac-btn done" id="pacBtnDone" onclick="sbMarcarFeito()">✓ Marcar como Visitado e Avançar →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Próximos postos -->
+        <div class="proximos-header">
+          <span id="sbProxLabel">PRÓXIMOS NA ROTA</span>
+          <span id="sbRotaBadge" style="font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid;display:none"></span>
+        </div>
+        <div class="proximos-list" id="proxList">
+          <div class="sb-empty">
+            <div class="sb-empty-icon">🗺️</div>
+            <div class="sb-empty-txt">Selecione uma rota acima<br>para iniciar a supervisão</div>
+          </div>
+        </div>
+
       </div>
+      <!-- toggle recolher sidebar -->
+      <button class="sidebar-toggle" id="sbToggleBtn" onclick="toggleSidebar()" title="Abrir painel">▸</button>
 
       <!-- Controles flutuantes (topo) -->
       <div class="map-controls-float">
@@ -1954,70 +2189,173 @@ function selecionarChecklistExterno(id) {
 }
 
 // ================================================================
-// SIDEBAR
+// PAINEL EM CAMPO — Sidebar inteligente
 // ================================================================
-var sidebarFilterRota = 'todos';
+var sbRotaAtual = 0;
+var sbOrdem = [];
+var _sbCollapsed = false;
 
-function filtrarSidebar(filtro, btn) {
-  sidebarFilterRota = filtro;
-  document.querySelectorAll('.filter-btn').forEach(function(b){ b.classList.remove('active'); b.style.background=''; b.style.color=''; });
-  btn.classList.add('active');
-  var filterColors = {'todos':'#94a3b8','1':'#3b82f6','2':'#10b981','3':'#f59e0b','4':'#8b5cf6'};
-  var fcolor = filterColors[filtro] || 'var(--text)';
-  btn.style.background = filtro === 'todos' ? 'rgba(255,255,255,0.1)' : fcolor;
-  btn.style.color = filtro === 'todos' ? 'var(--text)' : '#000';
-  if(filtro === '3') btn.style.color = '#000';
-  renderSidebar();
+function toggleSidebar() {
+  var panel = document.getElementById('painelEmCampo');
+  var btn   = document.getElementById('sbToggleBtn');
+  _sbCollapsed = !_sbCollapsed;
+  panel.classList.toggle('collapsed', _sbCollapsed);
+  if(btn) btn.style.display = _sbCollapsed ? 'flex' : 'none';
+  if(map) setTimeout(function(){ google.maps.event.trigger(map,'resize'); }, 310);
 }
 
-function renderSidebar() {
-  var postos = POSTOS;
-  if(sidebarFilterRota !== 'todos') {
-    postos = postos.filter(function(p){ return p.rota === parseInt(sidebarFilterRota); });
-  }
-  var totalVisitados = postos.filter(function(p){ return isVisited(p.id); }).length;
-  var html = '';
-  postos.forEach(function(posto){
-    var rota = ROTAS.find(function(r){ return r.id === posto.rota; });
-    var cor = rota ? rota.cor : '#64748b';
-    var corBg = rota ? rota.corBg : 'rgba(100,116,139,0.15)';
-    var rotaNome = rota ? rota.nome : '—';
-    var visitado = isVisited(posto.id);
-    var badgeIcon = visitado ? '✓' : posto.id;
-    var badgeBg = visitado ? 'var(--green)' : cor;
-    html += '<div class="posto-item'+(visitado?' visitado':'')+'" data-id="'+posto.id+'">' +
-      '<div class="posto-badge" style="background:'+badgeBg+';cursor:pointer" onclick="if(window.map){centerPosto('+posto.id+');}else{showTabByName(\'mapa\');setTimeout(function(){centerPosto('+posto.id+')},500);}">'+badgeIcon+'</div>' +
-      '<div class="posto-info" style="cursor:pointer" onclick="if(window.map){centerPosto('+posto.id+');}else{showTabByName(\'mapa\');setTimeout(function(){centerPosto('+posto.id+')},500);}">' +
-        '<div class="posto-name">'+posto.nome+(isCustom(posto)?'<span style="color:var(--accent);font-size:9px;margin-left:4px">★</span>':'')+'</div>' +
-        '<div class="posto-city">'+posto.cidade+' · '+posto.tipo+(posto.endereco?'<br><span style="font-size:10px;color:var(--muted)">'+posto.endereco+'</span>':'')+'</div>' +
-      '</div>' +
-      (visitado
-        ? '<button class="btn-visitar feito" onclick="event.stopPropagation();toggleVisitadoSidebar('+posto.id+')" title="Clique para desmarcar">✓ OK</button>'
-        : '<button class="btn-visitar pendente" onclick="event.stopPropagation();toggleVisitadoSidebar('+posto.id+')" title="Marcar como visitado">✓</button>'
-      ) +
-    '</div>';
+function sbSelecionarRota(rotaId) {
+  sbRotaAtual = rotaId;
+  var rotaCores = ['var(--text2)','#3b82f6','#10b981','#f59e0b','#8b5cf6'];
+  ['rp0','rp1','rp2','rp3','rp4'].forEach(function(id,i){
+    var el = document.getElementById(id); if(!el) return;
+    var cor = rotaCores[i];
+    el.classList.toggle('active', i === rotaId);
+    el.style.background = (i===rotaId) ? cor : 'none';
+    el.style.color = (i===rotaId) ? (i===3?'#000':'#fff') : cor;
+    el.style.borderColor = cor;
   });
-  document.getElementById('postosList').innerHTML = html || '<div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">Nenhum posto nesta rota</div>';
-  var pctV = postos.length ? Math.round((totalVisitados/postos.length)*100) : 0;
-  document.getElementById('sidebarCount').innerHTML = '<span style="color:var(--text)">📍 '+postos.length+' postos</span> &nbsp;·&nbsp; <span style="color:'+(pctV===100?'var(--green)':'var(--accent)')+';font-weight:700">✓ '+totalVisitados+'/'+postos.length+'</span>';
-}
-
-function toggleVisitadoSidebar(postoId) {
-  if(isVisited(postoId)) {
-    visitedPostos = visitedPostos.filter(function(id){ return id !== postoId; });
-    saveVisited();
-    showToast('↩ Visita desmarcada.');
-  } else {
-    visitedPostos.push(postoId);
-    saveVisited();
-    avancarProximoPosto();
-    showToast('✅ Posto marcado como visitado!');
+  // Sync modo em campo
+  if(rotaId > 0) { rotaAtiva = rotaId; }
+  filtrarMapaRota(rotaId);
+  var rota = ROTAS.find(function(r){ return r.id === rotaId; });
+  var badge = document.getElementById('sbRotaBadge');
+  if(badge) {
+    if(rota) { badge.textContent=rota.nome; badge.style.color=rota.cor; badge.style.borderColor=rota.cor; badge.style.background=rota.corBg; badge.style.display=''; }
+    else badge.style.display='none';
   }
   renderSidebar();
-  if(typeof google !== 'undefined' && map) renderMarkers();
+  renderMarkers();
   renderBarraProgresso();
 }
 
+function renderSidebar() {
+  var postos = sbRotaAtual===0 ? POSTOS.slice() : POSTOS.filter(function(p){ return p.rota===sbRotaAtual; });
+  var total = postos.length;
+  var visitadosCnt = postos.filter(function(p){ return isVisited(p.id); }).length;
+  var pct = total ? Math.round((visitadosCnt/total)*100) : 0;
+
+  // Status dot
+  var dot = document.getElementById('sbStatusDot');
+  var lbl = document.getElementById('sbStatusLabel');
+  var rotaObj = ROTAS.find(function(r){ return r.id===sbRotaAtual; });
+  if(dot && lbl) {
+    dot.style.background = rotaObj ? rotaObj.cor : 'var(--muted)';
+    dot.style.boxShadow  = rotaObj ? '0 0 6px '+rotaObj.cor : 'none';
+    lbl.textContent = rotaObj ? rotaObj.nome : 'Todas as Rotas';
+  }
+
+  // Progress bar
+  var fill  = document.getElementById('sbProgressFill');
+  var ptxt  = document.getElementById('sbProgressTxt');
+  var ppct  = document.getElementById('sbProgressPct');
+  var barC  = pct===100?'var(--green)':pct>50?'var(--accent)':'var(--accent2)';
+  if(fill)  { fill.style.width=pct+'%'; fill.style.background=barC; }
+  if(ptxt)  ptxt.textContent  = visitadosCnt+'/'+total+' postos visitados';
+  if(ppct)  { ppct.textContent=pct+'%'; ppct.style.color=barC; }
+
+  // Re-order: pendentes (nearest-neighbor), visitados ao final
+  var pend = postos.filter(function(p){ return !isVisited(p.id); });
+  var vis  = postos.filter(function(p){ return isVisited(p.id); });
+  sbOrdem = nearestNeighborAlgo(pend).concat(vis);
+
+  // Card posto atual
+  var cardEl = document.getElementById('postoAtualCard');
+  var atual = sbOrdem[0];
+  if(atual && !isVisited(atual.id) && sbRotaAtual > 0) {
+    cardEl.style.display = '';
+    var ra = ROTAS.find(function(r){ return r.id===atual.rota; });
+    var cor = ra ? ra.cor : '#64748b';
+    document.getElementById('pacNome').textContent = atual.nome;
+    document.getElementById('pacMeta').textContent = atual.cidade+' · '+atual.tipo+(ra?' · '+ra.nome:'');
+    if(dot) { dot.style.background=cor; dot.style.boxShadow='0 0 8px '+cor; }
+    if(lbl) lbl.textContent = (rotaObj ? rotaObj.nome : ra ? ra.nome : 'Rota');
+    if(map && typeof google!=='undefined') {
+      var mk = markers.find(function(m){ return m.id===atual.id; });
+      if(mk) setTimeout(function(){ map.panTo({lat:atual.lat,lng:atual.lng}); }, 150);
+    }
+  } else {
+    if(cardEl) cardEl.style.display='none';
+  }
+
+  // Lista próximos
+  var list = document.getElementById('proxList');
+  if(!list) return;
+  var pendLbl = document.getElementById('sbProxLabel');
+  if(pendLbl) pendLbl.textContent = pend.length ? 'PRÓXIMOS NA ROTA ('+pend.length+' pendentes)' : 'ROTA CONCLUÍDA ✅';
+
+  if(!postos.length) {
+    list.innerHTML = '<div class="sb-empty"><div class="sb-empty-icon">🗺️</div><div class="sb-empty-txt">Selecione uma rota acima<br>para iniciar a supervisão</div></div>';
+    return;
+  }
+
+  var html = '';
+  sbOrdem.forEach(function(posto, i) {
+    var ra2     = ROTAS.find(function(r){ return r.id===posto.rota; });
+    var cor2    = ra2 ? ra2.cor : '#64748b';
+    var visitado = isVisited(posto.id);
+    var eAtual   = (i===0 && !visitado && sbRotaAtual>0);
+    var distStr;
+    if(i>0){ var km2=haversineKm(sbOrdem[i-1].lat,sbOrdem[i-1].lng,posto.lat,posto.lng).toFixed(1); distStr='~'+km2+' km do anterior'; }
+    else   { var km2=haversineKm(BASE_SUPERVISAO.lat,BASE_SUPERVISAO.lng,posto.lat,posto.lng).toFixed(1); distStr='~'+km2+' km da base'; }
+    var seqLbl = visitado ? '✓' : String(i+1);
+    var seqBg  = visitado ? 'var(--green)' : cor2+(eAtual?'':'88');
+    var rowStyle = eAtual ? ' style="border-color:'+cor2+';background:'+cor2+'22"' : '';
+    html +=
+      '<div class="prox-item'+(visitado?' visitado':'')+'"'+rowStyle+' onclick="sbCentrarPosto('+posto.id+')">'+
+        '<div class="prox-seq" style="background:'+seqBg+';'+(eAtual?'box-shadow:0 0 10px '+cor2:'')+'">'+seqLbl+'</div>'+
+        '<div class="prox-info">'+
+          '<div class="prox-nome" style="'+(eAtual?'color:'+cor2+';font-weight:800':'')+'">'+
+            (eAtual?'→ ':'')+posto.nome+
+          '</div>'+
+          '<div class="prox-dist">'+posto.cidade+' · '+distStr+'</div>'+
+        '</div>'+
+        '<button class="prox-check" style="border-color:'+cor2+';color:'+(visitado?cor2:'var(--muted)')+'"'+
+          ' onclick="event.stopPropagation();sbToggleVisita('+posto.id+')"'+
+          ' title="'+(visitado?'Desmarcar':'Marcar visitado')+'">'+(visitado?'✓':'○')+'</button>'+
+      '</div>';
+  });
+  list.innerHTML = html;
+
+  // Dummy compat
+  var sc = document.getElementById('sidebarCount'); if(sc) sc.textContent='';
+}
+
+function sbNavegar() {
+  var atual = sbOrdem.find(function(p){ return !isVisited(p.id); });
+  if(!atual){ showToast('🎉 Todos os postos visitados!'); return; }
+  window.open('https://www.google.com/maps/dir/?api=1&destination='+atual.lat+','+atual.lng+'&travelmode=driving','_blank');
+}
+function sbFazerChecklist() {
+  var atual = sbOrdem.find(function(p){ return !isVisited(p.id); });
+  if(atual) abrirVistoriaModal(atual.id);
+}
+function sbMarcarFeito() {
+  var atual = sbOrdem.find(function(p){ return !isVisited(p.id); });
+  if(!atual){ showToast('🎉 Todos os postos visitados!'); return; }
+  visitedPostos.push(atual.id); saveVisited();
+  showToast('✅ '+atual.nome+' visitado!');
+  setTimeout(function(){
+    renderSidebar(); renderMarkers(); renderBarraProgresso();
+    var prox = sbOrdem.find(function(p){ return !isVisited(p.id); });
+    if(prox && map){ map.panTo({lat:prox.lat,lng:prox.lng}); map.setZoom(15); showToast('📍 Próximo: '+prox.nome); }
+    else if(!prox) showToast('🎉 Rota concluída! Parabéns.');
+  }, 300);
+}
+function sbToggleVisita(postoId) {
+  if(isVisited(postoId)){ visitedPostos=visitedPostos.filter(function(id){return id!==postoId;}); saveVisited(); showToast('↩ Visita desmarcada.'); }
+  else { visitedPostos.push(postoId); saveVisited(); showToast('✅ Posto marcado!'); }
+  renderSidebar(); renderMarkers(); renderBarraProgresso();
+}
+function sbCentrarPosto(postoId) {
+  var posto=getPostoById(postoId); if(!posto||!map) return;
+  map.panTo({lat:posto.lat,lng:posto.lng}); map.setZoom(15);
+  var m=markers.find(function(mk){return mk.id===postoId;});
+  var ra=ROTAS.find(function(r){return r.id===posto.rota;});
+  if(m) abrirCardPosto(posto,m.marker,ra);
+}
+function filtrarSidebar(filtro,btn){ sbSelecionarRota(filtro==='todos'?0:parseInt(filtro)); }
+function toggleVisitadoSidebar(postoId){ sbToggleVisita(postoId); }
 // ================================================================
 // ROTAS CARD
 // ================================================================
@@ -3751,8 +4089,7 @@ function abrirChecklistPDF() {
 
   var html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Checklist \u2014 ' + posto.nome + '</title>' +
     '<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:13px;color:#1a1a2e;padding:20px}' +
-    '.hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #f59e0b;padding-bottom:12px;margin-bottom:16px}' +
-    '.logo{background:#f59e0b;color:#000;font-weight:800;font-size:18px;padding:6px 12px;border-radius:6px;letter-spacing:1px}' +
+    '.hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #00a8cc;padding-bottom:12px;margin-bottom:16px}.logo-block{display:flex;align-items:center;gap:12px}' +
     '.meta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;background:#f0f4ff;border:1px solid #c8d5e8;border-radius:8px;padding:12px;margin-bottom:14px}' +
     '.mi label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:#6b7280;margin-bottom:3px}' +
     '.mi span{font-size:13px;font-weight:600;color:#1a1a2e}' +
@@ -3763,7 +4100,7 @@ function abrirChecklistPDF() {
     '.noprint{margin-top:20px;text-align:center}' +
     '@media print{@page{margin:15mm}.noprint{display:none!important}}' +
     '</style></head><body>' +
-    '<div class="hdr"><div class="logo">MS</div>' +
+    '<div class="hdr"><div class="logo-block"><svg width="50" height="55" viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><defs><linearGradient id="pHexG" x1="0" y1="0" x2="100" y2="110" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#0d3878"/><stop offset="100%" stop-color="#051225"/></linearGradient></defs><polygon points="50,4 96,28 96,82 50,106 4,82 4,28" fill="url(#pHexG)" stroke="#00c8f8" stroke-width="4"/><text x="50" y="66" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="34" font-weight="900" fill="#ffffff" letter-spacing="-2">PJ</text></svg><div class="logo-pj-names"><div class="logo-pj-ms">Grupo M.S</div><div class="logo-pj-sub">Segurança Patrimonial</div><div class="logo-pj-powered">✦ PJ Tecnologia e Sistemas</div></div></div>' +
     '<div style="text-align:center"><div style="font-size:18px;font-weight:800;color:#1e3a5f">Grupo M.S Seguran\u00e7a</div><div style="font-size:13px;color:#6b7280">Relat\u00f3rio de Checklist de Visita</div></div>' +
     '<div style="text-align:right;font-size:11px;color:#6b7280">Emitido em:<br><strong>' + new Date().toLocaleString('pt-BR') + '</strong></div></div>' +
     '<div class="meta">' +
@@ -3923,8 +4260,7 @@ function exportarRelatorioPDF() {
 
   var html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Relat\u00f3rio de Visitas</title>' +
     '<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:12px;color:#1a1a2e;padding:20px}' +
-    '.hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #f59e0b;padding-bottom:12px;margin-bottom:16px}' +
-    '.logo{background:#f59e0b;color:#000;font-weight:800;font-size:18px;padding:6px 12px;border-radius:6px;letter-spacing:1px}' +
+    '.hdr{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #00a8cc;padding-bottom:12px;margin-bottom:16px}.logo-block{display:flex;align-items:center;gap:12px}' +
     '.sum{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}' +
     '.sc{background:#f0f4ff;border:1px solid #c8d5e8;border-radius:8px;padding:10px 14px;text-align:center}' +
     '.sv{font-size:22px;font-weight:800;color:#1e3a5f}.sl{font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px}' +
@@ -3933,7 +4269,7 @@ function exportarRelatorioPDF() {
     '.noprint{margin-top:16px;text-align:center}' +
     '@media print{@page{size:A4 landscape;margin:10mm}.noprint{display:none!important}}' +
     '</style></head><body>' +
-    '<div class="hdr"><div class="logo">MS</div>' +
+    '<div class="hdr"><div style="display:flex;align-items:center;gap:12px"><svg width="50" height="55" viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><defs><linearGradient id="pHex2" x1="0" y1="0" x2="100" y2="110" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#0d3878"/><stop offset="100%" stop-color="#051225"/></linearGradient></defs><polygon points="50,4 96,28 96,82 50,106 4,82 4,28" fill="url(#pHex2)" stroke="#00c8f8" stroke-width="4"/><text x="50" y="66" text-anchor="middle" font-family="Arial Black,Arial,sans-serif" font-size="34" font-weight="900" fill="#ffffff" letter-spacing="-2">PJ</text></svg><div style="display:flex;flex-direction:column"><div style="font-family:Arial Black,Arial,sans-serif;font-size:18px;font-weight:900;color:#1e3a5f;line-height:1.1">Grupo M.S</div><div style="font-size:11px;color:#6b7280">Segurança Patrimonial</div><div style="font-size:9px;color:#00a8cc;letter-spacing:1px;text-transform:uppercase;margin-top:2px">✦ PJ Tecnologia e Sistemas</div></div></div>' +
     '<div style="text-align:center"><div style="font-size:18px;font-weight:800;color:#1e3a5f">Grupo M.S Seguran\u00e7a</div>' +
     '<div style="font-size:13px;color:#6b7280">Relat\u00f3rio de Visitas de Supervis\u00e3o</div></div>' +
     '<div style="text-align:right;font-size:11px;color:#6b7280">Emitido em:<br><strong>' + new Date().toLocaleString('pt-BR') + '</strong></div></div>' +
